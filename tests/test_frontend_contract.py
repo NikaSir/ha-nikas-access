@@ -53,6 +53,23 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("anchor.click()", self.source)
         self.assertNotIn("history.back(", self.source)
 
+    def test_header_matches_nikas_knowledge_base(self) -> None:
+        header_start = self.source.index('<header class="header">')
+        header_end = self.source.index("</header>", header_start)
+        header = self.source[header_start:header_end]
+        self.assertIn('<strong>Контроль доступа</strong>', header)
+        self.assertIn('<small>UI v${UI_VERSION}</small>', header)
+        self.assertIn('class="shell-button menu"', header)
+        self.assertIn('class="shell-button refresh"', header)
+        self.assertIn('icon="mdi:refresh"', header)
+        self.assertNotIn('data-view-target="diagnostics"', header)
+        self.assertIn("grid-template-columns:52px minmax(0,1fr) 52px", self.source)
+        self.assertIn("font-size:23px;font-weight:800", self.source)
+        self.assertIn("font-size:14px;font-weight:560", self.source)
+        self.assertIn(".title-return:focus-visible,.shell-button:focus-visible", self.source)
+        self.assertNotIn('class="return-home"', self.source)
+        self.assertNotIn("Вернуться в панель «Дом»", self.source)
+
     def test_bottom_navigation_is_internal_and_ordered(self) -> None:
         nav_start = self.source.index('<nav class="tabs"')
         nav_end = self.source.index("</nav>", nav_start)
@@ -71,6 +88,14 @@ class FrontendContractTests(unittest.TestCase):
         self.assertEqual(self.source.count('data-view-panel="diagnostics"'), 1)
         self.assertIn("activateView(viewId)", self.source)
         self.assertNotIn("history.pushState", self.source)
+
+    def test_diagnostics_lists_perimeter_devices_and_sensors(self) -> None:
+        self.assertIn("function discoverPerimeterDevices(registries, sources)", self.source)
+        self.assertEqual(self.source.count('data-perimeter-device-list="internal"'), 1)
+        self.assertEqual(self.source.count('data-perimeter-device-list="external"'), 1)
+        self.assertIn("data-perimeter-source", self.source)
+        self.assertIn("this.patchPerimeterDeviceStates()", self.source)
+        self.assertIn("hass-more-info", self.source)
 
     def test_intercom_module_is_visible_but_has_no_entities_or_controls(self) -> None:
         self.assertIn("const INTERCOM_MODULE = Object.freeze", self.source)

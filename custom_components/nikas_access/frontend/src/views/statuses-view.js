@@ -37,10 +37,5 @@ function renderStatusesView() {
         <ha-icon icon="mdi:label-outline"></ha-icon>
         Учитываются только действующие binary sensor с ярлыками периметров. Unknown и unavailable всегда означают «Нет данных».
       </p>
-
-      <button class="return-home" type="button" data-path="${HOME_PATH}">
-        <ha-icon icon="mdi:home-import-outline"></ha-icon>
-        <span>Вернуться в панель «Дом»</span>
-      </button>
     </section>`;
 }

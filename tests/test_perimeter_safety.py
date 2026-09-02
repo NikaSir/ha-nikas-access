@@ -30,6 +30,14 @@ class PerimeterSafetyTests(unittest.TestCase):
             self.assertIn(label, self.contract["perimeters"]["excluded_labels"])
         self.assertIn("isOperationalLabelSet(keys)", self.perimeters)
 
+    def test_diagnostic_inventory_uses_discovered_sources(self) -> None:
+        self.assertIn("function discoverPerimeterDevices(registries, sources)", self.perimeters)
+        self.assertIn("for (const entityId of sources?.[definition.key] || [])", self.perimeters)
+        self.assertIn("this._perimeterDevices = discoverPerimeterDevices", self.panel)
+        self.assertIn('data-perimeter-device-list="${definition.key}"', self.panel)
+        self.assertIn("data-perimeter-source", self.panel)
+        self.assertEqual(self.contract["perimeters"]["diagnostic_inventory"], "grouped_by_device")
+
     def test_unknown_or_unavailable_never_becomes_closed(self) -> None:
         start = self.perimeters.index("function perimeterModel(")
         end = self.perimeters.index("function accessSummaryModel", start)
@@ -48,6 +56,7 @@ class PerimeterSafetyTests(unittest.TestCase):
         self.assertNotIn("replaceChildren", body)
         self.assertIn('this.patchStatus("perimeter-internal"', body)
         self.assertIn('this.patchStatus("perimeter-external"', body)
+        self.assertIn("this.patchPerimeterDeviceStates()", body)
 
 
 if __name__ == "__main__":

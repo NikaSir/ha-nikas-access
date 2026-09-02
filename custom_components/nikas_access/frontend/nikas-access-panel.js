@@ -1,8 +1,8 @@
-/* NikaS Access v0.1.1 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.2 | generated from frontend/src | do not edit bundle directly */
 
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.1";
+const UI_VERSION = "0.1.2";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const HOME_PATH = "/dashboard-house-v12/home";
@@ -250,6 +250,69 @@ function discoverPerimeterSources(registries) {
   return result;
 }
 
+function deviceDisplayName(device) {
+  return device?.name_by_user
+    || device?.name
+    || device?.model
+    || device?.id
+    || "Устройство без названия";
+}
+
+function entityDisplayName(entity) {
+  return entity?.name
+    || entity?.original_name
+    || entity?.entity_id
+    || "Датчик без названия";
+}
+
+function discoverPerimeterDevices(registries, sources) {
+  const empty = { internal: [], external: [] };
+  if (!registries) return empty;
+
+  const entities = Array.isArray(registries.entities) ? registries.entities : [];
+  const devices = Array.isArray(registries.devices) ? registries.devices : [];
+  const entityMap = new Map(entities.map((entity) => [entity.entity_id, entity]));
+  const deviceMap = new Map(devices.map((device) => [device.id, device]));
+  const result = { internal: [], external: [] };
+
+  for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
+    const groups = new Map();
+    for (const entityId of sources?.[definition.key] || []) {
+      const entity = entityMap.get(entityId) || { entity_id: entityId };
+      const device = deviceMap.get(entity.device_id) || null;
+      const groupKey = device?.id || `entity:${entityId}`;
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          key: groupKey,
+          deviceId: device?.id || null,
+          name: device ? deviceDisplayName(device) : entityDisplayName(entity),
+          entities: [],
+        });
+      }
+      groups.get(groupKey).entities.push({
+        entityId,
+        name: entityDisplayName(entity),
+      });
+    }
+
+    result[definition.key] = [...groups.values()]
+      .map((group) => ({
+        ...group,
+        entities: group.entities.sort((left, right) => left.name.localeCompare(right.name, "ru")),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name, "ru"));
+  }
+
+  return result;
+}
+
+function perimeterSourceStateModel(hass, entityId) {
+  const state = normalizedState(stateObject(hass, entityId)?.state);
+  if (state === "on") return { text: "Открыто", tone: "yellow", icon: "mdi:door-open" };
+  if (state === "off") return { text: "Закрыто", tone: "green", icon: "mdi:door-closed-lock" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:alert-circle-outline" };
+}
+
 function perimeterModel(hass, entityIds, definition) {
   const ids = Array.isArray(entityIds) ? entityIds : [];
   if (ids.length === 0) {
@@ -385,11 +448,6 @@ function renderStatusesView() {
         <ha-icon icon="mdi:label-outline"></ha-icon>
         Учитываются только действующие binary sensor с ярлыками периметров. Unknown и unavailable всегда означают «Нет данных».
       </p>
-
-      <button class="return-home" type="button" data-path="${HOME_PATH}">
-        <ha-icon icon="mdi:home-import-outline"></ha-icon>
-        <span>Вернуться в панель «Дом»</span>
-      </button>
     </section>`;
 }
 
@@ -496,9 +554,7 @@ function renderDiagnosticsView() {
     <section class="panel-view" data-view-panel="diagnostics" aria-labelledby="diagnostics-title" hidden>
       <div class="view-heading">
         <span><small>Источники и готовность</small><h1 id="diagnostics-title">Диагностика</h1></span>
-        <button class="inline-refresh" type="button" data-registry-retry aria-label="Обновить реестры Home Assistant">
-          <ha-icon icon="mdi:refresh"></ha-icon>
-        </button>
+        <ha-icon icon="mdi:stethoscope"></ha-icon>
       </div>
 
       <section class="diagnostic-card">
@@ -517,6 +573,35 @@ function renderDiagnosticsView() {
             <span><small>Внешний периметр</small><strong data-status-text>Нет данных</strong></span>
           </div>
         </div>
+      </section>
+
+      <section class="diagnostic-card perimeter-inventory-card">
+        <h2>Устройства периметров</h2>
+        <p class="diagnostic-note">Показаны устройства и датчики, которые фактически входят в расчёт статусов.</p>
+        <section class="perimeter-device-group" aria-labelledby="diagnostic-internal-devices-title">
+          <div class="perimeter-device-group-heading">
+            <ha-icon icon="mdi:shield-home-outline"></ha-icon>
+            <span>
+              <strong id="diagnostic-internal-devices-title">Внутренний периметр</strong>
+              <small data-perimeter-device-count="internal">Устройств: 0 · датчиков: 0</small>
+            </span>
+          </div>
+          <div class="perimeter-device-list" data-perimeter-device-list="internal">
+            <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
+          </div>
+        </section>
+        <section class="perimeter-device-group" aria-labelledby="diagnostic-external-devices-title">
+          <div class="perimeter-device-group-heading">
+            <ha-icon icon="mdi:shield-lock-outline"></ha-icon>
+            <span>
+              <strong id="diagnostic-external-devices-title">Внешний периметр</strong>
+              <small data-perimeter-device-count="external">Устройств: 0 · датчиков: 0</small>
+            </span>
+          </div>
+          <div class="perimeter-device-list" data-perimeter-device-list="external">
+            <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
+          </div>
+        </section>
       </section>
 
       <section class="diagnostic-card">
@@ -581,18 +666,21 @@ function panelStyles() {
       border-radius:16px;background:var(--card-background-color,#fff);box-shadow:0 7px 20px rgba(23,45,76,.08);
       display:grid;place-items:center;color:var(--primary-text-color,#17191c);cursor:pointer
     }
-    .shell-button.info{justify-self:end;color:var(--primary-color,#03a9d9)}
+    .shell-button.refresh{justify-self:end;color:var(--primary-color,#03a9d9)}
+    .shell-button.refresh:disabled{opacity:.55;cursor:wait}
     .shell-button ha-icon{--mdc-icon-size:25px}
     .title-return{
-      justify-self:center;min-width:min(294px,100%);max-width:100%;min-height:44px;padding:5px 14px;
+      justify-self:center;min-width:min(290px,100%);max-width:100%;min-height:44px;padding:5px 14px;
       border:1px solid color-mix(in srgb,var(--primary-color,#03a9d9) 24%,var(--divider-color,#dfe3e8));
       border-radius:16px;background:color-mix(in srgb,var(--primary-color,#03a9d9) 5%,var(--card-background-color,#fff));
       box-shadow:0 5px 16px rgba(23,45,76,.06);color:inherit;display:grid;place-content:center;text-align:center;
       cursor:pointer;line-height:1.08
     }
-    .title-return strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:22px;font-weight:800}
-    .title-return small{display:block;font-size:13px;font-weight:600;color:var(--secondary-text-color,#68737d)}
-    .title-return:active,.shell-button:active{transform:scale(.985)}
+    .title-return strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:23px;font-weight:800}
+    .title-return small{display:block;font-size:14px;font-weight:560;color:var(--secondary-text-color,#68737d)}
+    .title-return:active{transform:scale(.985);border-color:color-mix(in srgb,var(--primary-color,#03a9d9) 42%,var(--divider-color,#dfe3e8));background:color-mix(in srgb,var(--primary-color,#03a9d9) 13%,var(--card-background-color,#fff));box-shadow:0 2px 7px rgba(23,45,76,.05)}
+    .title-return:focus-visible,.shell-button:focus-visible{outline:2px solid var(--primary-color,#03a9d9);outline-offset:2px}
+    .shell-button:active{transform:scale(.985)}
     .viewport{
       position:relative;z-index:1;min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;
       overscroll-behavior:none;touch-action:pan-y;background:var(--primary-background-color,#f4f6f8);
@@ -607,8 +695,6 @@ function panelStyles() {
     .view-heading{min-height:45px;padding:0 4px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .view-heading>span{min-width:0}.view-heading small{display:block;color:var(--secondary-text-color,#68737d);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.055em}
     .view-heading h1{margin:1px 0 0;font-size:25px;line-height:1.1}.view-heading>ha-icon{--mdc-icon-size:31px;color:var(--primary-color,#2186d7)}
-    .inline-refresh{width:44px;height:44px;padding:0;border:1px solid var(--divider-color,#dce1e6);border-radius:15px;background:var(--card-background-color,#fff);color:var(--primary-color,#2186d7);display:grid;place-items:center;cursor:pointer;box-shadow:0 5px 16px rgba(23,45,76,.05)}
-    .inline-refresh ha-icon{--mdc-icon-size:25px}.inline-refresh:active{transform:scale(.97)}
     .summary-card{
       min-height:72px;padding:11px 14px;border:1px solid var(--divider-color,#dce1e6);border-radius:20px;
       background:var(--card-background-color,#fff);box-shadow:0 7px 24px rgba(23,45,76,.07);
@@ -692,12 +778,6 @@ function panelStyles() {
     .command.stop ha-icon{color:var(--warning-color,#ef8f22)}
     .command:disabled{opacity:.42;filter:grayscale(.35);cursor:not-allowed}
     .command:active:not(:disabled){transform:scale(.97)}
-    .return-home{
-      width:100%;min-height:52px;padding:9px 14px;border:1px solid var(--divider-color,#dce1e6);border-radius:17px;
-      background:var(--card-background-color,#fff);color:var(--primary-text-color,#15191d);display:flex;align-items:center;
-      justify-content:center;gap:8px;font-size:16px;font-weight:800;cursor:pointer
-    }
-    .return-home ha-icon{--mdc-icon-size:23px;color:var(--primary-color,#2186d7)}
     .empty-state{padding:24px 18px;border:1px solid var(--divider-color,#dce1e6);border-radius:22px;background:var(--card-background-color,#fff);box-shadow:0 8px 25px rgba(23,45,76,.065);text-align:center}
     .empty-icon{width:64px;height:64px;margin:0 auto 12px;border-radius:22px;background:color-mix(in srgb,var(--primary-color,#2186d7) 10%,transparent);color:var(--primary-color,#2186d7);display:grid;place-items:center}
     .empty-icon ha-icon{--mdc-icon-size:37px}.empty-state h2{margin:0;font-size:21px}.empty-state p{max-width:520px;margin:7px auto 0;color:var(--secondary-text-color,#68737d);font-size:13px;line-height:1.4}
@@ -709,6 +789,20 @@ function panelStyles() {
     .diagnostic-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
     .diagnostic-meta span{min-width:0;padding:10px 12px;border:1px solid var(--divider-color,#dce1e6);border-radius:15px;background:var(--card-background-color,#fff);display:grid;gap:2px}
     .diagnostic-meta small{color:var(--secondary-text-color,#68737d);font-size:10px;text-transform:uppercase;letter-spacing:.04em}.diagnostic-meta strong{font-size:12px;overflow-wrap:anywhere}
+    .diagnostic-note{margin:-3px 0 11px;color:var(--secondary-text-color,#68737d);font-size:12px;line-height:1.35}
+    .perimeter-device-group{display:grid;gap:8px;padding-top:11px;border-top:1px solid var(--divider-color,#dce1e6)}
+    .perimeter-device-group+.perimeter-device-group{margin-top:13px}
+    .perimeter-device-group-heading{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center}
+    .perimeter-device-group-heading>ha-icon{--mdc-icon-size:26px;color:var(--primary-color,#2186d7)}
+    .perimeter-device-group-heading span{min-width:0;display:grid;gap:1px}.perimeter-device-group-heading strong{font-size:15px}.perimeter-device-group-heading small{font-size:12px;color:var(--secondary-text-color,#68737d)}
+    .perimeter-device-list{display:grid;gap:8px}.empty-diagnostic{margin:0;padding:11px;border-radius:14px;background:var(--secondary-background-color,#eef1f4);color:var(--secondary-text-color,#68737d);font-size:12px;line-height:1.35}
+    .perimeter-device{padding:10px;border:1px solid var(--divider-color,#dce1e6);border-radius:16px;background:color-mix(in srgb,var(--secondary-background-color,#eef1f4) 45%,var(--card-background-color,#fff));display:grid;gap:8px}
+    .perimeter-device-heading{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:center}
+    .perimeter-device-heading>ha-icon{--mdc-icon-size:23px;color:var(--primary-color,#2186d7)}
+    .perimeter-device-heading span{min-width:0;display:grid;gap:1px}.perimeter-device-heading strong{font-size:14px;line-height:1.2}.perimeter-device-heading small{font-size:12px;color:var(--secondary-text-color,#68737d)}
+    .perimeter-source-list{display:grid;gap:6px}
+    .perimeter-source{width:100%;min-width:0;min-height:54px;padding:8px;border:1px solid color-mix(in srgb,var(--summary-color,#7b858f) 25%,var(--divider-color,#ddd));border-radius:13px;background:color-mix(in srgb,var(--summary-color,#7b858f) 5%,var(--card-background-color,#fff));color:inherit;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:7px;align-items:center;text-align:left;cursor:pointer}
+    .perimeter-source>ha-icon{--mdc-icon-size:21px;color:var(--summary-color,#7b858f)}.perimeter-source>span{min-width:0;display:grid;gap:2px}.perimeter-source strong{font-size:13px;line-height:1.2}.perimeter-source code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--secondary-text-color,#68737d);overflow-wrap:anywhere}.perimeter-source em{font-style:normal;font-size:12px;font-weight:800;color:var(--summary-color,#7b858f);white-space:nowrap}
     .tabs{
       position:relative;z-index:20;min-width:0;min-height:0;padding:6px max(6px,env(safe-area-inset-right,0px))
         calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));
@@ -752,10 +846,10 @@ function panelStyles() {
     }
     @media(max-width:620px){.gate-grid{grid-template-columns:1fr}}
     @media(max-width:390px){
-      .header{grid-template-columns:48px minmax(0,1fr) 48px;padding-inline:max(8px,env(safe-area-inset-left,0px))}
-      .title-return{min-width:0;width:100%;padding-inline:7px}.title-return strong{font-size:20px}.title-return small{font-size:12px}
+      .header{grid-template-columns:48px minmax(0,1fr) 48px}
+      .title-return{min-width:0;width:100%;padding-inline:8px}.title-return strong{font-size:21px}.title-return small{font-size:13px}
       .gate-heading h2{font-size:19px}.summary-copy strong{font-size:17px}.view-heading h1{font-size:23px}
-      .capability-list,.diagnostic-meta{grid-template-columns:1fr}.tabs button small{font-size:10px}
+      .capability-list,.diagnostic-meta{grid-template-columns:1fr}
     }
     @media(max-height:720px){.canvas{padding-top:7px}.gate-card{gap:8px}.summary-card{min-height:64px}.status-row,.position-note{min-height:45px}.command{min-height:53px}}
   `;
@@ -776,6 +870,7 @@ class NikasAccessPanel extends HTMLElement {
     this._registryError = "";
     this._registryLoadId = 0;
     this._perimeterSources = { internal: [], external: [] };
+    this._perimeterDevices = { internal: [], external: [] };
     this._commandLock = false;
     this._pendingCommand = null;
     this._lastCommandAt = 0;
@@ -847,10 +942,11 @@ class NikasAccessPanel extends HTMLElement {
           </button>
           <button class="title-return" type="button" data-path="${HOME_PATH}" aria-label="Контроль доступа — вернуться в панель Дом">
             <strong>Контроль доступа</strong>
-            <small><span data-current-view>Статусы</span> · v${UI_VERSION}</small>
+            <small>UI v${UI_VERSION}</small>
           </button>
-          <button class="shell-button info" type="button" data-view-target="diagnostics" aria-label="Открыть диагностику панели">
-            <ha-icon icon="mdi:stethoscope"></ha-icon>
+          <button class="shell-button refresh" type="button" data-registry-retry
+            aria-label="Обновить реестры Home Assistant" title="Обновить реестры Home Assistant">
+            <ha-icon icon="mdi:refresh"></ha-icon>
           </button>
         </header>
 
@@ -918,7 +1014,6 @@ class NikasAccessPanel extends HTMLElement {
     this._zoomToast = this.shadowRoot.querySelector(".zoom-toast");
     this._commandToast = this.shadowRoot.querySelector(".command-toast");
     this._navigationProxy = this.shadowRoot.getElementById("navigation-proxy");
-    this._currentViewLabel = this.shadowRoot.querySelector("[data-current-view]");
 
     this.shadowRoot.addEventListener("click", (event) => this.controlClick(event));
     this.shadowRoot.addEventListener("pointerdown", (event) => this.tapPointerDown(event), { passive: true });
@@ -1002,7 +1097,6 @@ class NikasAccessPanel extends HTMLElement {
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     }
-    if (this._currentViewLabel?.textContent !== view.label) this._currentViewLabel.textContent = view.label;
     this._viewport?.scrollTo({ left: 0, top: 0 });
     if (this._zoom.scale > 1.03) {
       this._zoom.x = 0;
@@ -1112,8 +1206,52 @@ class NikasAccessPanel extends HTMLElement {
   applyRegistries(registries) {
     this._registries = registries;
     this._perimeterSources = discoverPerimeterSources(registries);
+    this._perimeterDevices = discoverPerimeterDevices(registries, this._perimeterSources);
     this._registryError = "";
+    this.renderPerimeterDevices();
     this.scheduleStatePatch();
+  }
+
+  renderPerimeterDevices() {
+    for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
+      const groups = this._perimeterDevices[definition.key] || [];
+      const list = this.shadowRoot.querySelector(`[data-perimeter-device-list="${definition.key}"]`);
+      const count = this.shadowRoot.querySelector(`[data-perimeter-device-count="${definition.key}"]`);
+      const sensorCount = groups.reduce((total, group) => total + group.entities.length, 0);
+      if (count) count.textContent = `Устройств: ${groups.length} · датчиков: ${sensorCount}`;
+      if (!list) continue;
+      if (groups.length === 0) {
+        list.innerHTML = `<p class="empty-diagnostic">Действующие устройства с ярлыком «${escapeHtml(definition.label)}» не найдены</p>`;
+        continue;
+      }
+
+      list.innerHTML = groups.map((group) => `
+        <article class="perimeter-device">
+          <div class="perimeter-device-heading">
+            <ha-icon icon="mdi:devices"></ha-icon>
+            <span>
+              <strong>${escapeHtml(group.name)}</strong>
+              <small>${group.deviceId ? "Устройство Home Assistant" : "Сущность без устройства"}</small>
+            </span>
+          </div>
+          <div class="perimeter-source-list">
+            ${group.entities.map((entity) => {
+              const state = perimeterSourceStateModel(this._hass, entity.entityId);
+              const friendlyName = stateObject(this._hass, entity.entityId)?.attributes?.friendly_name || entity.name;
+              return `
+                <button class="perimeter-source tone-${state.tone}" type="button"
+                  data-entity="${escapeHtml(entity.entityId)}" data-perimeter-source="${escapeHtml(entity.entityId)}">
+                  <ha-icon icon="${escapeHtml(state.icon)}"></ha-icon>
+                  <span>
+                    <strong>${escapeHtml(friendlyName)}</strong>
+                    <code>${escapeHtml(entity.entityId)}</code>
+                  </span>
+                  <em data-source-state>${escapeHtml(state.text)}</em>
+                </button>`;
+            }).join("")}
+          </div>
+        </article>`).join("");
+    }
   }
 
   async loadRegistries(force = false) {
@@ -1276,7 +1414,30 @@ class NikasAccessPanel extends HTMLElement {
     this.patchStatus("diagnostic-sectional-position", sectionalPosition);
     this.patchStatus("diagnostic-sectional-control", sectionalControl);
     this.patchStatus("diagnostic-swing-control", swingControl);
+    this.patchPerimeterDeviceStates();
+    this.patchRegistryRefresh();
     this.patchCommandLocks();
+  }
+
+  patchPerimeterDeviceStates() {
+    for (const node of this.shadowRoot.querySelectorAll("[data-perimeter-source]")) {
+      const model = perimeterSourceStateModel(this._hass, node.dataset.perimeterSource);
+      const text = node.querySelector("[data-source-state]");
+      const icon = node.querySelector("ha-icon");
+      if (text?.textContent !== model.text) text.textContent = model.text;
+      if (icon?.getAttribute("icon") !== model.icon) icon.setAttribute("icon", model.icon);
+      for (const tone of STATUS_TONES) node.classList.toggle(`tone-${tone}`, tone === model.tone);
+    }
+  }
+
+  patchRegistryRefresh() {
+    for (const button of this.shadowRoot.querySelectorAll("[data-registry-retry]")) {
+      if (button.disabled !== this._registryLoading) button.disabled = this._registryLoading;
+      const busy = String(this._registryLoading);
+      const title = this._registryLoading ? "Реестры обновляются" : "Обновить реестры Home Assistant";
+      if (button.getAttribute("aria-busy") !== busy) button.setAttribute("aria-busy", busy);
+      if (button.title !== title) button.title = title;
+    }
   }
 
   registryStatusModel() {
