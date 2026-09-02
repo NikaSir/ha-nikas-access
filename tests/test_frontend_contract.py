@@ -22,12 +22,21 @@ class FrontendContractTests(unittest.TestCase):
         self.assertEqual(self.source.count("customElements.define(ELEMENT_NAME"), 1)
 
     def test_fixed_shell_has_one_working_viewport(self) -> None:
-        self.assertEqual(self.source.count('<main class="viewport" id="viewport">'), 1)
-        self.assertEqual(self.source.count('<header class="header">'), 1)
-        self.assertEqual(self.source.count('<nav class="tabs"'), 1)
-        self.assertIn("position:fixed;inset:0", self.source)
+        self.assertEqual(self.source.count('<main class="nikas-shell__viewport viewport" id="viewport">'), 1)
+        self.assertEqual(self.source.count('<header class="nikas-shell__header header">'), 1)
+        self.assertEqual(self.source.count('<nav class="nikas-shell__tabs tabs"'), 1)
+        self.assertIn('const NIKAS_SHELL_V2_VERSION = "2.1"', self.source)
+        self.assertIn("block-size:100%", self.source)
+        self.assertNotIn("position:fixed", self.source)
+        self.assertNotIn("100vw", self.source)
+        self.assertNotIn("100vh", self.source)
+        self.assertNotIn("100dvh", self.source)
         self.assertIn("overflow-y:auto;overflow-x:hidden", self.source)
         self.assertIn("env(safe-area-inset-top,0px)", self.source)
+        self.assertIn("max-inline-size:1280px", self.source)
+        self.assertIn("container:nikas-panel / inline-size", self.source)
+        self.assertIn("@container nikas-panel (min-width:600px)", self.source)
+        self.assertIn("@container nikas-panel (min-width:1024px)", self.source)
 
     def test_zoom_is_scoped_and_persistent(self) -> None:
         self.assertIn('this._viewport.addEventListener("touchstart"', self.source)
@@ -46,32 +55,35 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("this.patchStatus", body)
         self.assertIn("window.requestAnimationFrame", self.source)
 
-    def test_navigation_uses_home_assistant_anchor_contract(self) -> None:
-        self.assertIn('const HOME_PATH = "/dashboard-house-v12/home"', self.source)
-        self.assertIn('id="navigation-proxy"', self.source)
-        self.assertIn("anchor.href = path", self.source)
-        self.assertIn("anchor.click()", self.source)
+    def test_navigation_uses_source_aware_home_assistant_contract(self) -> None:
+        self.assertIn('const PARENT_ROUTE = "/dashboard-house-v13/home"', self.source)
+        self.assertIn('const SAFE_RETURN_ROUTE = "/dashboard-house-v13/home"', self.source)
+        self.assertIn("captureNikasShellReturnRoute", self.source)
+        self.assertIn("window.history.pushState", self.source)
+        self.assertIn('new Event("location-changed")', self.source)
+        self.assertNotIn('id="navigation-proxy"', self.source)
+        self.assertNotIn("window.location.assign", self.source)
         self.assertNotIn("history.back(", self.source)
 
     def test_header_matches_nikas_knowledge_base(self) -> None:
-        header_start = self.source.index('<header class="header">')
+        header_start = self.source.index('<header class="nikas-shell__header header">')
         header_end = self.source.index("</header>", header_start)
         header = self.source[header_start:header_end]
         self.assertIn('<strong>Контроль доступа</strong>', header)
         self.assertIn('<small>UI v${UI_VERSION}</small>', header)
-        self.assertIn('class="shell-button menu"', header)
-        self.assertIn('class="shell-button refresh"', header)
+        self.assertIn('class="nikas-shell__side-action shell-button menu"', header)
+        self.assertIn('nikas-shell__side-action--right shell-button refresh', header)
         self.assertIn('icon="mdi:refresh"', header)
         self.assertNotIn('data-view-target="diagnostics"', header)
         self.assertIn("grid-template-columns:52px minmax(0,1fr) 52px", self.source)
         self.assertIn("font-size:23px;font-weight:800", self.source)
         self.assertIn("font-size:14px;font-weight:560", self.source)
-        self.assertIn(".title-return:focus-visible,.shell-button:focus-visible", self.source)
+        self.assertIn(".nikas-shell__title:focus-visible,.nikas-shell__side-action:focus-visible", self.source)
         self.assertNotIn('class="return-home"', self.source)
         self.assertNotIn("Вернуться в панель «Дом»", self.source)
 
     def test_bottom_navigation_is_internal_and_ordered(self) -> None:
-        nav_start = self.source.index('<nav class="tabs"')
+        nav_start = self.source.index('<nav class="nikas-shell__tabs tabs"')
         nav_end = self.source.index("</nav>", nav_start)
         nav = self.source[nav_start:nav_end]
         targets = re.findall(r'data-view-target="([a-z]+)"', nav)
@@ -87,7 +99,9 @@ class FrontendContractTests(unittest.TestCase):
         self.assertEqual(self.source.count('data-view-panel="intercom"'), 1)
         self.assertEqual(self.source.count('data-view-panel="diagnostics"'), 1)
         self.assertIn("activateView(viewId)", self.source)
-        self.assertNotIn("history.pushState", self.source)
+        start = self.source.index("  activateView(viewId) {")
+        end = self.source.index("  controlClick(event) {", start)
+        self.assertNotIn("history.pushState", self.source[start:end])
 
     def test_diagnostics_lists_perimeter_devices_and_sensors(self) -> None:
         self.assertIn("function discoverAccessDevices(registries, sources)", self.source)
