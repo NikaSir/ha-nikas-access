@@ -1,0 +1,12 @@
+{
+  "id": "access_v1",
+  "title": "Контроль доступа",
+  "sidebar_title": "Доступ",
+  "route_root": "dashboard-access-v1",
+  "entry_route": "/dashboard-access-v1/home",
+  "parent_route": "/dashboard-house-v12/home",
+  "webcomponent_name": "nikas-access-panel",
+  "frontend_bundle": "nikas-access-panel.js",
+  "ui_version": "0.1.0",
+  "nikas_ui_standard": "1.17"
+}

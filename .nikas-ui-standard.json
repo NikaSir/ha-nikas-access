@@ -1,0 +1,23 @@
+{
+  "standard": "NikaS specialized panel UI",
+  "standard_version": "1.17",
+  "integration_version": "0.1.0",
+  "ui_version": "0.1.0",
+  "route": "/dashboard-access-v1/home",
+  "parent_route": "/dashboard-house-v12/home",
+  "viewport_count": 1,
+  "fixed_header": true,
+  "fixed_footer": true,
+  "safe_area": true,
+  "scroll_owner": "working-area",
+  "horizontal_scroll_at_100_percent": false,
+  "pinch_scope": "working-area",
+  "two_finger_double_tap_reset": true,
+  "zoom_persistence": "localStorage",
+  "state_update": "targeted-dom-patch",
+  "production_bundle": "custom_components/nikas_access/frontend/nikas-access-panel.js",
+  "optimistic_position": false,
+  "command_confirmation": true,
+  "command_deduplication": true,
+  "intercom_visible": false
+}

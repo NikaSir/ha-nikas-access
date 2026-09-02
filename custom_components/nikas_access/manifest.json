@@ -1,0 +1,13 @@
+{
+  "domain": "nikas_access",
+  "name": "NikaS Access",
+  "codeowners": ["@NikaSir"],
+  "config_flow": true,
+  "dependencies": ["http", "panel_custom"],
+  "documentation": "https://github.com/NikaSir/ha-nikas-access",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/NikaSir/ha-nikas-access/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

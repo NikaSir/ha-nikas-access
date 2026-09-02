@@ -1,0 +1,158 @@
+const ELEMENT_NAME = "nikas-access-panel";
+const UI_VERSION = "0.1.0";
+const PANEL_ROOT = "/dashboard-access-v1";
+const ROOT_PATH = "/dashboard-access-v1/home";
+const HOME_PATH = "/dashboard-house-v12/home";
+const ZOOM_KEY = "nikas.access.zoom.v1";
+const COMMAND_COOLDOWN_MS = 1400;
+const TAP_CLICK_GUARD_MS = 700;
+const TAP_MOVE_THRESHOLD_PX = 8;
+const DIRECT_TOUCH_THRESHOLD_PX = 10;
+const UNKNOWN_STATES = new Set(["unknown", "unavailable", "none", "null", ""]);
+const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
+
+const SECTIONAL_POSITION_ENTITY = "binary_sensor.sensor_do_zb_15_16_contact";
+const SECTIONAL_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_door";
+const SWING_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_2_door";
+
+const GATES = Object.freeze({
+  sectional: Object.freeze({
+    key: "sectional",
+    label: "Секционные ворота",
+    controlEntityId: SECTIONAL_CONTROL_ENTITY,
+  }),
+  swing: Object.freeze({
+    key: "swing",
+    label: "Распашные ворота",
+    controlEntityId: SWING_CONTROL_ENTITY,
+  }),
+});
+
+const COMMANDS = Object.freeze({
+  "sectional:open": Object.freeze({
+    key: "sectional:open",
+    gateKey: "sectional",
+    objectLabel: "Секционные ворота",
+    actionLabel: "Открыть",
+    service: "open_cover",
+    entityId: SECTIONAL_CONTROL_ENTITY,
+  }),
+  "sectional:stop": Object.freeze({
+    key: "sectional:stop",
+    gateKey: "sectional",
+    objectLabel: "Секционные ворота",
+    actionLabel: "Стоп",
+    service: "stop_cover",
+    entityId: SECTIONAL_CONTROL_ENTITY,
+  }),
+  "sectional:close": Object.freeze({
+    key: "sectional:close",
+    gateKey: "sectional",
+    objectLabel: "Секционные ворота",
+    actionLabel: "Закрыть",
+    service: "close_cover",
+    entityId: SECTIONAL_CONTROL_ENTITY,
+  }),
+  "swing:open": Object.freeze({
+    key: "swing:open",
+    gateKey: "swing",
+    objectLabel: "Распашные ворота",
+    actionLabel: "Открыть",
+    service: "open_cover",
+    entityId: SWING_CONTROL_ENTITY,
+  }),
+  "swing:stop": Object.freeze({
+    key: "swing:stop",
+    gateKey: "swing",
+    objectLabel: "Распашные ворота",
+    actionLabel: "Стоп",
+    service: "stop_cover",
+    entityId: SWING_CONTROL_ENTITY,
+  }),
+  "swing:close": Object.freeze({
+    key: "swing:close",
+    gateKey: "swing",
+    objectLabel: "Распашные ворота",
+    actionLabel: "Закрыть",
+    service: "close_cover",
+    entityId: SWING_CONTROL_ENTITY,
+  }),
+});
+
+function normalizedState(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function stateObject(hass, entityId) {
+  return hass?.states?.[entityId] || null;
+}
+
+function hasUsableState(hass, entityId) {
+  const item = stateObject(hass, entityId);
+  return Boolean(item) && !UNKNOWN_STATES.has(normalizedState(item.state));
+}
+
+function sectionalPositionModel(hass) {
+  const state = normalizedState(stateObject(hass, SECTIONAL_POSITION_ENTITY)?.state);
+  if (state === "on") {
+    return { text: "Открыто", tone: "yellow", icon: "mdi:garage-open-variant" };
+  }
+  if (state === "off") {
+    return { text: "Закрыто", tone: "grey", icon: "mdi:garage-variant-lock" };
+  }
+  return { text: "Нет данных", tone: "red", icon: "mdi:garage-alert-variant" };
+}
+
+function gateControlModel(hass, gate) {
+  if (hasUsableState(hass, gate.controlEntityId)) {
+    return { text: "Управление доступно", tone: "green", icon: "mdi:lan-connect" };
+  }
+  return { text: "Нет данных управления", tone: "red", icon: "mdi:lan-disconnect" };
+}
+
+function accessSummaryModel(hass) {
+  const sectionalControl = gateControlModel(hass, GATES.sectional);
+  const swingControl = gateControlModel(hass, GATES.swing);
+  const position = sectionalPositionModel(hass);
+
+  if (sectionalControl.tone === "red" || swingControl.tone === "red" || position.tone === "red") {
+    return {
+      title: "Есть точки без данных",
+      detail: "Проверьте датчик и каналы управления",
+      tone: "red",
+      icon: "mdi:shield-alert-outline",
+    };
+  }
+  if (position.text === "Открыто") {
+    return {
+      title: "Секционные ворота открыты",
+      detail: "Оба канала управления доступны",
+      tone: "yellow",
+      icon: "mdi:shield-home-outline",
+    };
+  }
+  return {
+    title: "Секционные ворота закрыты",
+    detail: "Оба канала управления доступны",
+    tone: "grey",
+    icon: "mdi:shield-check-outline",
+  };
+}
+
+function commandAvailable(hass, command) {
+  return hasUsableState(hass, command.entityId) && typeof hass?.callService === "function";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function errorText(error) {
+  const raw = error?.message || error?.body?.message || String(error || "Неизвестная ошибка");
+  return String(raw).replace(/\s+/g, " ").trim().slice(0, 240) || "Неизвестная ошибка";
+}
