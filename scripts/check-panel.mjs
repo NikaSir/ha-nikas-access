@@ -22,8 +22,22 @@ function count(pattern) {
 requireContract(count(/<main class="viewport" id="viewport">/g) === 1, "one working viewport required");
 requireContract(count(/<header class="header">/g) === 1, "one fixed header required");
 requireContract(count(/<nav class="tabs"/g) === 1, "one fixed bottom navigation required");
-requireContract(count(/data-view-target="(?:statuses|gates|intercom|diagnostics)"/g) === 5, "four internal tabs and one diagnostics shortcut required");
+requireContract(count(/data-view-target="(?:statuses|gates|intercom|diagnostics)"/g) === 4, "exactly four internal tabs required");
 requireContract(count(/data-view-panel="(?:statuses|gates|intercom|diagnostics)"/g) === 4, "four internal views required");
+const headerStart = frontend.indexOf('<header class="header">');
+const headerEnd = frontend.indexOf("</header>", headerStart);
+const header = frontend.slice(headerStart, headerEnd);
+requireContract(header.includes('<strong>Контроль доступа</strong>'), "Header panel title drift");
+requireContract(header.includes('<small>UI v${UI_VERSION}</small>'), "Header must show the exact UI version line");
+requireContract(header.includes('class="shell-button menu"'), "Header must retain the Home Assistant menu");
+requireContract(header.includes('class="shell-button refresh"'), "Header global refresh action is missing");
+requireContract(header.includes('icon="mdi:refresh"'), "Header refresh icon drift");
+requireContract(!header.includes('data-view-target="diagnostics"'), "Header must not duplicate internal diagnostics navigation");
+requireContract(!frontend.includes('class="return-home"'), "work area must not duplicate the Header return control");
+requireContract(!frontend.includes("Вернуться в панель «Дом»"), "duplicate return label is forbidden");
+requireContract(frontend.includes(".title-return strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:23px;font-weight:800}"), "Header primary typography drift");
+requireContract(frontend.includes(".title-return small{display:block;font-size:14px;font-weight:560"), "Header secondary typography drift");
+requireContract(frontend.includes(".title-return:focus-visible,.shell-button:focus-visible"), "Header focus treatment is missing");
 requireContract(count(/data-command="(?:sectional|swing):(?:open|stop|close)"/g) === 6, "six explicit gate commands required");
 requireContract(!frontend.includes("<iframe"), "iframe is forbidden");
 requireContract(!/^\s*import\s/m.test(frontend) && !frontend.includes("import("), "production bundle must be autonomous");
@@ -47,6 +61,10 @@ requireContract(frontend.includes('config/entity_registry/list'), "perimeter ent
 requireContract(frontend.includes('config/label_registry/list'), "perimeter label registry lookup is missing");
 requireContract(frontend.includes('const ACTIVE_LABEL = "v_ekspluatatsii"'), "operational perimeter filter is missing");
 requireContract(frontend.includes('function discoverPerimeterSources(registries)'), "perimeter source discovery is missing");
+requireContract(frontend.includes('function discoverPerimeterDevices(registries, sources)'), "perimeter device inventory is missing");
+requireContract(count(/data-perimeter-device-list="(?:internal|external)"/g) === 2, "both perimeter device lists are required");
+requireContract(frontend.includes("data-perimeter-source"), "diagnostic sensor state targets are missing");
+requireContract(frontend.includes("this.patchPerimeterDeviceStates()"), "diagnostic sensor states must update in place");
 requireContract(frontend.includes('state !== "off"'), "non-binary perimeter state must remain unavailable");
 
 const positionStart = frontend.indexOf("function sectionalPositionModel(hass)");

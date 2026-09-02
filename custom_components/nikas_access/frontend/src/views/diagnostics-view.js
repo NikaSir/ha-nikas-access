@@ -3,9 +3,7 @@ function renderDiagnosticsView() {
     <section class="panel-view" data-view-panel="diagnostics" aria-labelledby="diagnostics-title" hidden>
       <div class="view-heading">
         <span><small>Источники и готовность</small><h1 id="diagnostics-title">Диагностика</h1></span>
-        <button class="inline-refresh" type="button" data-registry-retry aria-label="Обновить реестры Home Assistant">
-          <ha-icon icon="mdi:refresh"></ha-icon>
-        </button>
+        <ha-icon icon="mdi:stethoscope"></ha-icon>
       </div>
 
       <section class="diagnostic-card">
@@ -24,6 +22,35 @@ function renderDiagnosticsView() {
             <span><small>Внешний периметр</small><strong data-status-text>Нет данных</strong></span>
           </div>
         </div>
+      </section>
+
+      <section class="diagnostic-card perimeter-inventory-card">
+        <h2>Устройства периметров</h2>
+        <p class="diagnostic-note">Показаны устройства и датчики, которые фактически входят в расчёт статусов.</p>
+        <section class="perimeter-device-group" aria-labelledby="diagnostic-internal-devices-title">
+          <div class="perimeter-device-group-heading">
+            <ha-icon icon="mdi:shield-home-outline"></ha-icon>
+            <span>
+              <strong id="diagnostic-internal-devices-title">Внутренний периметр</strong>
+              <small data-perimeter-device-count="internal">Устройств: 0 · датчиков: 0</small>
+            </span>
+          </div>
+          <div class="perimeter-device-list" data-perimeter-device-list="internal">
+            <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
+          </div>
+        </section>
+        <section class="perimeter-device-group" aria-labelledby="diagnostic-external-devices-title">
+          <div class="perimeter-device-group-heading">
+            <ha-icon icon="mdi:shield-lock-outline"></ha-icon>
+            <span>
+              <strong id="diagnostic-external-devices-title">Внешний периметр</strong>
+              <small data-perimeter-device-count="external">Устройств: 0 · датчиков: 0</small>
+            </span>
+          </div>
+          <div class="perimeter-device-list" data-perimeter-device-list="external">
+            <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
+          </div>
+        </section>
       </section>
 
       <section class="diagnostic-card">

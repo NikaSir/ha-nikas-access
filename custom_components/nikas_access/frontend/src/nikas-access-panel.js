@@ -12,6 +12,7 @@ class NikasAccessPanel extends HTMLElement {
     this._registryError = "";
     this._registryLoadId = 0;
     this._perimeterSources = { internal: [], external: [] };
+    this._perimeterDevices = { internal: [], external: [] };
     this._commandLock = false;
     this._pendingCommand = null;
     this._lastCommandAt = 0;
@@ -83,10 +84,11 @@ class NikasAccessPanel extends HTMLElement {
           </button>
           <button class="title-return" type="button" data-path="${HOME_PATH}" aria-label="Контроль доступа — вернуться в панель Дом">
             <strong>Контроль доступа</strong>
-            <small><span data-current-view>Статусы</span> · v${UI_VERSION}</small>
+            <small>UI v${UI_VERSION}</small>
           </button>
-          <button class="shell-button info" type="button" data-view-target="diagnostics" aria-label="Открыть диагностику панели">
-            <ha-icon icon="mdi:stethoscope"></ha-icon>
+          <button class="shell-button refresh" type="button" data-registry-retry
+            aria-label="Обновить реестры Home Assistant" title="Обновить реестры Home Assistant">
+            <ha-icon icon="mdi:refresh"></ha-icon>
           </button>
         </header>
 
@@ -154,7 +156,6 @@ class NikasAccessPanel extends HTMLElement {
     this._zoomToast = this.shadowRoot.querySelector(".zoom-toast");
     this._commandToast = this.shadowRoot.querySelector(".command-toast");
     this._navigationProxy = this.shadowRoot.getElementById("navigation-proxy");
-    this._currentViewLabel = this.shadowRoot.querySelector("[data-current-view]");
 
     this.shadowRoot.addEventListener("click", (event) => this.controlClick(event));
     this.shadowRoot.addEventListener("pointerdown", (event) => this.tapPointerDown(event), { passive: true });
@@ -238,7 +239,6 @@ class NikasAccessPanel extends HTMLElement {
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     }
-    if (this._currentViewLabel?.textContent !== view.label) this._currentViewLabel.textContent = view.label;
     this._viewport?.scrollTo({ left: 0, top: 0 });
     if (this._zoom.scale > 1.03) {
       this._zoom.x = 0;
@@ -348,8 +348,52 @@ class NikasAccessPanel extends HTMLElement {
   applyRegistries(registries) {
     this._registries = registries;
     this._perimeterSources = discoverPerimeterSources(registries);
+    this._perimeterDevices = discoverPerimeterDevices(registries, this._perimeterSources);
     this._registryError = "";
+    this.renderPerimeterDevices();
     this.scheduleStatePatch();
+  }
+
+  renderPerimeterDevices() {
+    for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
+      const groups = this._perimeterDevices[definition.key] || [];
+      const list = this.shadowRoot.querySelector(`[data-perimeter-device-list="${definition.key}"]`);
+      const count = this.shadowRoot.querySelector(`[data-perimeter-device-count="${definition.key}"]`);
+      const sensorCount = groups.reduce((total, group) => total + group.entities.length, 0);
+      if (count) count.textContent = `Устройств: ${groups.length} · датчиков: ${sensorCount}`;
+      if (!list) continue;
+      if (groups.length === 0) {
+        list.innerHTML = `<p class="empty-diagnostic">Действующие устройства с ярлыком «${escapeHtml(definition.label)}» не найдены</p>`;
+        continue;
+      }
+
+      list.innerHTML = groups.map((group) => `
+        <article class="perimeter-device">
+          <div class="perimeter-device-heading">
+            <ha-icon icon="mdi:devices"></ha-icon>
+            <span>
+              <strong>${escapeHtml(group.name)}</strong>
+              <small>${group.deviceId ? "Устройство Home Assistant" : "Сущность без устройства"}</small>
+            </span>
+          </div>
+          <div class="perimeter-source-list">
+            ${group.entities.map((entity) => {
+              const state = perimeterSourceStateModel(this._hass, entity.entityId);
+              const friendlyName = stateObject(this._hass, entity.entityId)?.attributes?.friendly_name || entity.name;
+              return `
+                <button class="perimeter-source tone-${state.tone}" type="button"
+                  data-entity="${escapeHtml(entity.entityId)}" data-perimeter-source="${escapeHtml(entity.entityId)}">
+                  <ha-icon icon="${escapeHtml(state.icon)}"></ha-icon>
+                  <span>
+                    <strong>${escapeHtml(friendlyName)}</strong>
+                    <code>${escapeHtml(entity.entityId)}</code>
+                  </span>
+                  <em data-source-state>${escapeHtml(state.text)}</em>
+                </button>`;
+            }).join("")}
+          </div>
+        </article>`).join("");
+    }
   }
 
   async loadRegistries(force = false) {
@@ -512,7 +556,30 @@ class NikasAccessPanel extends HTMLElement {
     this.patchStatus("diagnostic-sectional-position", sectionalPosition);
     this.patchStatus("diagnostic-sectional-control", sectionalControl);
     this.patchStatus("diagnostic-swing-control", swingControl);
+    this.patchPerimeterDeviceStates();
+    this.patchRegistryRefresh();
     this.patchCommandLocks();
+  }
+
+  patchPerimeterDeviceStates() {
+    for (const node of this.shadowRoot.querySelectorAll("[data-perimeter-source]")) {
+      const model = perimeterSourceStateModel(this._hass, node.dataset.perimeterSource);
+      const text = node.querySelector("[data-source-state]");
+      const icon = node.querySelector("ha-icon");
+      if (text?.textContent !== model.text) text.textContent = model.text;
+      if (icon?.getAttribute("icon") !== model.icon) icon.setAttribute("icon", model.icon);
+      for (const tone of STATUS_TONES) node.classList.toggle(`tone-${tone}`, tone === model.tone);
+    }
+  }
+
+  patchRegistryRefresh() {
+    for (const button of this.shadowRoot.querySelectorAll("[data-registry-retry]")) {
+      if (button.disabled !== this._registryLoading) button.disabled = this._registryLoading;
+      const busy = String(this._registryLoading);
+      const title = this._registryLoading ? "Реестры обновляются" : "Обновить реестры Home Assistant";
+      if (button.getAttribute("aria-busy") !== busy) button.setAttribute("aria-busy", busy);
+      if (button.title !== title) button.title = title;
+    }
   }
 
   registryStatusModel() {

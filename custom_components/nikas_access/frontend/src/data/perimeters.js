@@ -109,6 +109,69 @@ function discoverPerimeterSources(registries) {
   return result;
 }
 
+function deviceDisplayName(device) {
+  return device?.name_by_user
+    || device?.name
+    || device?.model
+    || device?.id
+    || "Устройство без названия";
+}
+
+function entityDisplayName(entity) {
+  return entity?.name
+    || entity?.original_name
+    || entity?.entity_id
+    || "Датчик без названия";
+}
+
+function discoverPerimeterDevices(registries, sources) {
+  const empty = { internal: [], external: [] };
+  if (!registries) return empty;
+
+  const entities = Array.isArray(registries.entities) ? registries.entities : [];
+  const devices = Array.isArray(registries.devices) ? registries.devices : [];
+  const entityMap = new Map(entities.map((entity) => [entity.entity_id, entity]));
+  const deviceMap = new Map(devices.map((device) => [device.id, device]));
+  const result = { internal: [], external: [] };
+
+  for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
+    const groups = new Map();
+    for (const entityId of sources?.[definition.key] || []) {
+      const entity = entityMap.get(entityId) || { entity_id: entityId };
+      const device = deviceMap.get(entity.device_id) || null;
+      const groupKey = device?.id || `entity:${entityId}`;
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          key: groupKey,
+          deviceId: device?.id || null,
+          name: device ? deviceDisplayName(device) : entityDisplayName(entity),
+          entities: [],
+        });
+      }
+      groups.get(groupKey).entities.push({
+        entityId,
+        name: entityDisplayName(entity),
+      });
+    }
+
+    result[definition.key] = [...groups.values()]
+      .map((group) => ({
+        ...group,
+        entities: group.entities.sort((left, right) => left.name.localeCompare(right.name, "ru")),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name, "ru"));
+  }
+
+  return result;
+}
+
+function perimeterSourceStateModel(hass, entityId) {
+  const state = normalizedState(stateObject(hass, entityId)?.state);
+  if (state === "on") return { text: "Открыто", tone: "yellow", icon: "mdi:door-open" };
+  if (state === "off") return { text: "Закрыто", tone: "green", icon: "mdi:door-closed-lock" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:alert-circle-outline" };
+}
+
 function perimeterModel(hass, entityIds, definition) {
   const ids = Array.isArray(entityIds) ? entityIds : [];
   if (ids.length === 0) {
