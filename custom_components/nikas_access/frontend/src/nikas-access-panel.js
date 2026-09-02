@@ -28,6 +28,7 @@ class NikasAccessPanel extends HTMLElement {
     this._manualActivationTarget = null;
     this._manualActivationUntil = 0;
     this._returnRoute = null;
+    this._scrollBoundaryGuardCleanup = null;
     this._onResize = () => this.applyTransform();
     this._onKeyDown = (event) => {
       if (event.key === "Escape" && this._pendingCommand && !this._commandLock) {
@@ -50,6 +51,11 @@ class NikasAccessPanel extends HTMLElement {
 
   connectedCallback() {
     this.mountShell();
+    this._scrollBoundaryGuardCleanup?.();
+    this._scrollBoundaryGuardCleanup = createNikasShellScrollBoundaryGuard({
+      host: this,
+      viewport: this._viewport,
+    });
     if (window.location.pathname === PANEL_ROOT) {
       window.history.replaceState(null, "", ROOT_PATH);
     }
@@ -61,6 +67,8 @@ class NikasAccessPanel extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._scrollBoundaryGuardCleanup?.();
+    this._scrollBoundaryGuardCleanup = null;
     window.removeEventListener("resize", this._onResize);
     window.visualViewport?.removeEventListener?.("resize", this._onResize);
     window.removeEventListener("keydown", this._onKeyDown);

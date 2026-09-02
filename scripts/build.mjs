@@ -18,7 +18,7 @@ const sourceFiles = [
   "nikas-access-panel.js",
 ];
 
-const banner = `/* NikaS Access v0.1.6 | generated from frontend/src | do not edit bundle directly */\n`;
+const banner = `/* NikaS Access v0.1.7 | generated from frontend/src | do not edit bundle directly */\n`;
 const bundle = `${banner}${sourceFiles.map((file) => {
   const body = readFileSync(join(sourceRoot, file), "utf8").trimEnd();
   return `\n/* source: ${file} */\n${body}\n`;

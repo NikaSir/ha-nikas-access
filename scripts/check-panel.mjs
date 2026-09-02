@@ -50,6 +50,13 @@ requireContract(frontend.includes('const NIKAS_SHELL_V2_VERSION = "2.1"'), "Shel
 requireContract(frontend.includes("padding:2px 3px 6px"), "bottom-tab label clearance is missing");
 requireContract(frontend.includes("--mdc-icon-size:26px"), "bottom-tab icon must fit the 52px target row");
 requireContract(frontend.includes("line-height:14px"), "bottom-tab label line box must be explicit");
+requireContract(frontend.includes("overscroll-behavior-y:none"), "work viewport must disable CSS overscroll chaining");
+requireContract(frontend.includes("function shouldBlockNikasShellBoundaryMove"), "scroll-boundary decision helper is missing");
+requireContract(frontend.includes("function createNikasShellScrollBoundaryGuard"), "iOS scroll-boundary guard is missing");
+requireContract(frontend.includes("NIKAS_SHELL_BOUNDARY_THRESHOLD_PX = 4"), "scroll guard must preserve tap-sized motion");
+requireContract(frontend.includes('host.addEventListener("touchmove", moveTouch, { passive: false, capture: true })'), "scroll-boundary guard must capture a non-passive touchmove");
+requireContract(frontend.includes("this._scrollBoundaryGuardCleanup = createNikasShellScrollBoundaryGuard"), "panel does not install the scroll-boundary guard");
+requireContract(frontend.includes("this._scrollBoundaryGuardCleanup?.();"), "panel does not clean up the scroll-boundary guard");
 requireContract(frontend.includes("captureNikasShellReturnRoute"), "source-aware Header return is missing");
 requireContract(frontend.includes('new Event("location-changed")'), "explicit Home Assistant navigation is missing");
 requireContract(!frontend.includes("position:fixed"), "panel must not bind to the browser window");

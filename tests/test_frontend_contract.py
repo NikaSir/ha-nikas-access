@@ -38,6 +38,20 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("@container nikas-panel (min-width:600px)", self.source)
         self.assertIn("@container nikas-panel (min-width:1024px)", self.source)
 
+    def test_ios_boundary_guard_keeps_scroll_inside_working_area(self) -> None:
+        self.assertIn("overscroll-behavior-y:none", self.source)
+        self.assertIn("function shouldBlockNikasShellBoundaryMove", self.source)
+        self.assertIn("function createNikasShellScrollBoundaryGuard", self.source)
+        self.assertIn(
+            'host.addEventListener("touchmove", moveTouch, { passive: false, capture: true })',
+            self.source,
+        )
+        self.assertIn(
+            "this._scrollBoundaryGuardCleanup = createNikasShellScrollBoundaryGuard",
+            self.source,
+        )
+        self.assertIn("this._scrollBoundaryGuardCleanup?.();", self.source)
+
     def test_zoom_is_scoped_and_persistent(self) -> None:
         self.assertIn('this._viewport.addEventListener("touchstart"', self.source)
         self.assertIn("touches.length === 2", self.source)
