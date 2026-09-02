@@ -1,5 +1,5 @@
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.3";
+const UI_VERSION = "0.1.4";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const HOME_PATH = "/dashboard-house-v12/home";
