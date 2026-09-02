@@ -62,6 +62,8 @@ function shellContext(path = "/dashboard-access-v1/home", search = "") {
     captureNikasShellReturnRoute,
     rememberNikasSpecializedSourceRoute,
     navigateNikasShell,
+    shouldBlockNikasShellBoundaryMove,
+    createNikasShellScrollBoundaryGuard,
   };`, context);
   return { ...context, api: context.shellApi, sessionStorage, localStorage, pushes, events };
 }
@@ -115,4 +117,72 @@ function shellContext(path = "/dashboard-access-v1/home", search = "") {
   assert.equal(events.at(-1), "location-changed");
 }
 
-console.log("Shell v2 navigation harness passed");
+{
+  const { api } = shellContext();
+  const move = (overrides = {}) => api.shouldBlockNikasShellBoundaryMove({
+    deltaX: 0,
+    deltaY: 10,
+    inViewport: true,
+    scrollTop: 0,
+    scrollHeight: 1000,
+    clientHeight: 500,
+    ...overrides,
+  });
+  assert.equal(move(), true, "a downward pull at the top edge must be consumed");
+  assert.equal(move({ deltaY: -10 }), false, "an upward move at the top must retain native scrolling");
+  assert.equal(move({ scrollTop: 250 }), false, "interior native scrolling must remain available");
+  assert.equal(move({ deltaY: -10, scrollTop: 500 }), true, "an upward pull at the bottom edge must be consumed");
+  assert.equal(move({ scrollTop: 500 }), false, "a downward move at the bottom must retain native scrolling");
+  assert.equal(move({ scrollHeight: 500 }), true, "a short view must consume downward edge movement");
+  assert.equal(move({ deltaY: -10, scrollHeight: 500 }), true, "a short view must consume upward edge movement");
+  assert.equal(move({ inViewport: false }), true, "fixed chrome must not drag the Home Assistant page");
+  assert.equal(move({ deltaX: 20, deltaY: 10 }), false, "a horizontal-dominant gesture must not be captured");
+}
+
+{
+  const { api } = shellContext();
+  const listeners = new Map();
+  const host = {
+    addEventListener(type, listener, options) {
+      listeners.set(type, { listener, options });
+    },
+    removeEventListener(type, listener, capture) {
+      const registered = listeners.get(type);
+      if (registered?.listener === listener && capture === true) listeners.delete(type);
+    },
+  };
+  const viewport = {
+    scrollTop: 0,
+    scrollHeight: 1000,
+    clientHeight: 500,
+    contains: () => false,
+  };
+  const cleanup = api.createNikasShellScrollBoundaryGuard({ host, viewport });
+  assert.equal(listeners.get("touchstart").options.passive, false, "touch sequence must be cancelable on iOS");
+  assert.equal(listeners.get("touchmove").options.passive, false, "touch boundary listener must be non-passive");
+  assert.equal(listeners.get("touchmove").options.capture, true, "touch boundary listener must capture before Home Assistant");
+
+  const target = {};
+  listeners.get("touchstart").listener({
+    target,
+    touches: [{ clientX: 40, clientY: 100 }],
+    composedPath: () => [target, viewport, host],
+  });
+  let prevented = false;
+  listeners.get("touchmove").listener({
+    cancelable: true,
+    touches: [{ clientX: 40, clientY: 102 }],
+    preventDefault: () => { prevented = true; },
+  });
+  assert.equal(prevented, false, "tap-sized touch jitter must not be canceled");
+  listeners.get("touchmove").listener({
+    cancelable: true,
+    touches: [{ clientX: 40, clientY: 125 }],
+    preventDefault: () => { prevented = true; },
+  });
+  assert.equal(prevented, true, "guard must cancel an actual top-edge pull event");
+  cleanup();
+  assert.equal(listeners.size, 0, "guard cleanup must remove every capture listener");
+}
+
+console.log("Shell v2 navigation and scroll-boundary harness passed");

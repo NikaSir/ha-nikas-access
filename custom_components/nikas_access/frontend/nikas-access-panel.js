@@ -1,8 +1,8 @@
-/* NikaS Access v0.1.6 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.7 | generated from frontend/src | do not edit bundle directly */
 
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.6";
+const UI_VERSION = "0.1.7";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const PARENT_ROUTE = "/dashboard-house-v13/home";
@@ -150,6 +150,7 @@ const NIKAS_SHELL_V2_VERSION = "2.1";
 const NIKAS_SOURCE_ROUTE_KEY = "nikas.specialized.source_route.v1";
 const NIKAS_SOURCE_ROUTE_AT_KEY = "nikas.specialized.source_route_at.v1";
 const NIKAS_SOURCE_ROUTE_MAX_AGE_MS = 30_000;
+const NIKAS_SHELL_BOUNDARY_THRESHOLD_PX = 4;
 
 const NIKAS_BASE_ROUTES = Object.freeze([
   Object.freeze({ root: "/dashboard-house-v13", entry: "/dashboard-house-v13/home" }),
@@ -232,7 +233,7 @@ function nikasShellV2Styles() {
     .nikas-shell__peer{grid-area:peer;min-inline-size:0;min-block-size:0}
     .nikas-shell__viewport{
       grid-area:viewport;position:relative;z-index:1;min-inline-size:0;min-block-size:0;
-      overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;touch-action:pan-y;
+      overflow-y:auto;overflow-x:hidden;overscroll-behavior-x:none;overscroll-behavior-y:none;touch-action:pan-y;
       background:var(--primary-background-color,#f4f6f8);-webkit-overflow-scrolling:touch;overflow-anchor:none
     }
     .nikas-shell__viewport.zoomed{overflow:hidden;touch-action:none}
@@ -266,6 +267,100 @@ function nikasShellV2Styles() {
       .nikas-shell__title strong{font-size:21px}.nikas-shell__title small{font-size:13px}
     }
   `;
+}
+
+function shouldBlockNikasShellBoundaryMove({
+  deltaX,
+  deltaY,
+  inViewport,
+  scrollTop,
+  scrollHeight,
+  clientHeight,
+}) {
+  if (!Number.isFinite(deltaY) || Math.abs(deltaY) <= Math.abs(Number(deltaX) || 0)) return false;
+  if (!inViewport) return true;
+  const maximumScroll = Math.max(0, (Number(scrollHeight) || 0) - (Number(clientHeight) || 0));
+  if (maximumScroll <= 1) return true;
+  const currentScroll = Math.max(0, Number(scrollTop) || 0);
+  if (deltaY > 0 && currentScroll <= 1) return true;
+  return deltaY < 0 && currentScroll >= maximumScroll - 1;
+}
+
+function createNikasShellScrollBoundaryGuard({ host, viewport }) {
+  if (!host?.addEventListener || !viewport) return () => {};
+  let touch = null;
+
+  const eventStartedInViewport = (event) => {
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+    return path.includes(viewport) || Boolean(viewport.contains?.(event.target));
+  };
+  const rememberTouch = (event) => {
+    if (event.touches.length !== 1) {
+      touch = null;
+      return;
+    }
+    const current = event.touches[0];
+    touch = {
+      x: current.clientX,
+      y: current.clientY,
+      startX: current.clientX,
+      startY: current.clientY,
+      inViewport: eventStartedInViewport(event),
+      blocked: false,
+    };
+  };
+  const moveTouch = (event) => {
+    if (event.touches.length !== 1) {
+      touch = null;
+      return;
+    }
+    const current = event.touches[0];
+    if (!touch) {
+      rememberTouch(event);
+      return;
+    }
+    const deltaX = current.clientX - touch.x;
+    const deltaY = current.clientY - touch.y;
+    const travelX = current.clientX - touch.startX;
+    const travelY = current.clientY - touch.startY;
+    touch.x = current.clientX;
+    touch.y = current.clientY;
+    const verticalIntent = Math.abs(travelY) > NIKAS_SHELL_BOUNDARY_THRESHOLD_PX
+      && Math.abs(travelY) > Math.abs(travelX);
+    if (!touch.blocked && verticalIntent) {
+      touch.blocked = shouldBlockNikasShellBoundaryMove({
+        deltaX,
+        deltaY,
+        inViewport: touch.inViewport,
+        scrollTop: viewport.scrollTop,
+        scrollHeight: viewport.scrollHeight,
+        clientHeight: viewport.clientHeight,
+      });
+    }
+    if (touch.blocked && event.cancelable) {
+      event.preventDefault();
+    }
+  };
+  const endTouch = (event) => {
+    if (event.touches.length === 1) rememberTouch(event);
+    else touch = null;
+  };
+  const cancelTouch = () => {
+    touch = null;
+  };
+
+  host.addEventListener("touchstart", rememberTouch, { passive: false, capture: true });
+  host.addEventListener("touchmove", moveTouch, { passive: false, capture: true });
+  host.addEventListener("touchend", endTouch, { passive: true, capture: true });
+  host.addEventListener("touchcancel", cancelTouch, { passive: true, capture: true });
+
+  return () => {
+    host.removeEventListener("touchstart", rememberTouch, true);
+    host.removeEventListener("touchmove", moveTouch, true);
+    host.removeEventListener("touchend", endTouch, true);
+    host.removeEventListener("touchcancel", cancelTouch, true);
+    touch = null;
+  };
 }
 
 function normalizeNikasBaseRoute(value) {
@@ -1182,6 +1277,7 @@ class NikasAccessPanel extends HTMLElement {
     this._manualActivationTarget = null;
     this._manualActivationUntil = 0;
     this._returnRoute = null;
+    this._scrollBoundaryGuardCleanup = null;
     this._onResize = () => this.applyTransform();
     this._onKeyDown = (event) => {
       if (event.key === "Escape" && this._pendingCommand && !this._commandLock) {
@@ -1204,6 +1300,11 @@ class NikasAccessPanel extends HTMLElement {
 
   connectedCallback() {
     this.mountShell();
+    this._scrollBoundaryGuardCleanup?.();
+    this._scrollBoundaryGuardCleanup = createNikasShellScrollBoundaryGuard({
+      host: this,
+      viewport: this._viewport,
+    });
     if (window.location.pathname === PANEL_ROOT) {
       window.history.replaceState(null, "", ROOT_PATH);
     }
@@ -1215,6 +1316,8 @@ class NikasAccessPanel extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._scrollBoundaryGuardCleanup?.();
+    this._scrollBoundaryGuardCleanup = null;
     window.removeEventListener("resize", this._onResize);
     window.visualViewport?.removeEventListener?.("resize", this._onResize);
     window.removeEventListener("keydown", this._onKeyDown);

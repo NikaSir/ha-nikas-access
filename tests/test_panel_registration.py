@@ -97,7 +97,7 @@ class PanelRegistrationTests(unittest.TestCase):
         self.assertEqual(kwargs["frontend_url_path"], "dashboard-access-v1")
         self.assertEqual(kwargs["webcomponent_name"], "nikas-access-panel")
         self.assertEqual(kwargs["sidebar_title"], "Доступ")
-        self.assertEqual(kwargs["module_url"], "/nikas_access_panel/nikas-access-panel.js?v=0.1.6")
+        self.assertEqual(kwargs["module_url"], "/nikas_access_panel/nikas-access-panel.js?v=0.1.7")
         self.assertFalse(kwargs["embed_iframe"])
         self.assertTrue(kwargs["handle_safe_area"])
 

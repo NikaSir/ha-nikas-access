@@ -8,6 +8,7 @@ Production bundle: `custom_components/nikas_access/frontend/nikas-access-panel.j
 | Host-bound root; no browser-window fixed shell | PASS |
 | Header `60px` plus effective top safe area | PASS |
 | One `minmax(0,1fr)` work viewport | PASS |
+| iOS capture-phase boundary guard; no Home Assistant pull-to-refresh/outer scroll | PASS |
 | Bottom Tab Bar `64px` plus effective bottom safe area | PASS |
 | Work frame `1280px`; gutters `12 / 16 / 24px` | PASS |
 | Four internal destinations only | PASS |
