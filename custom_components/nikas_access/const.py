@@ -2,4 +2,4 @@
 
 DOMAIN = "nikas_access"
 NAME = "NikaS Access"
-VERSION = "0.1.3"
+VERSION = "0.1.4"
