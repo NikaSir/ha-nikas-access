@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -25,12 +26,13 @@ def main() -> None:
     frontend = (DOMAIN / "frontend" / "nikas-access-panel.js").read_text(encoding="utf-8")
 
     require(manifest["domain"] == "nikas_access", "integration domain drift")
-    require(manifest["version"] == "0.1.4", "integration version drift")
-    require(panel_manifest["ui_version"] == "0.1.4", "panel version drift")
-    require(contract["integration"]["version"] == "0.1.4", "contract version drift")
-    require(standard["standard_version"] == "1.17", "NikaS UI standard drift")
+    require(manifest["version"] == "0.1.5", "integration version drift")
+    require(panel_manifest["ui_version"] == "0.1.5", "panel version drift")
+    require(contract["integration"]["version"] == "0.1.5", "contract version drift")
+    require(standard["standard_version"] == "2.1", "NikaS UI standard drift")
+    require(standard["navigation_contract_version"] == "1.2", "navigation contract drift")
     require(panel_manifest["entry_route"] == "/dashboard-access-v1/home", "entry route drift")
-    require(panel_manifest["parent_route"] == "/dashboard-house-v12/home", "parent route drift")
+    require(panel_manifest["parent_route"] == "/dashboard-house-v13/home", "parent route drift")
     require('PANEL_URL_PATH = "dashboard-access-v1"' in panel_source, "panel root drift")
     require("frontend.async_panel_exists(hass, PANEL_URL_PATH)" in panel_source, "route collision guard missing")
     require("domain_data.get(PANEL_ROUTE_OWNER) != entry_id" in panel_source, "route ownership guard missing")
@@ -41,7 +43,16 @@ def main() -> None:
     require(frontend.count("customElements.define(ELEMENT_NAME") == 1, "one custom element registration required")
     require("shadowRoot.innerHTML" in frontend, "initial shell mount missing")
     require(contract["panel"]["internal_views"] == ["statuses", "gates", "intercom", "diagnostics"], "internal navigation drift")
-    require(contract["panel"]["header"]["title_line_2"] == "UI v0.1.4", "Header UI version drift")
+    require(contract["panel"]["header"]["title_line_2"] == "UI v0.1.5", "Header UI version drift")
+    shell_path = ROOT / standard["shell_source"]
+    shell_source = shell_path.read_text(encoding="utf-8")
+    shell_digest = hashlib.sha256(shell_source.encode("utf-8")).hexdigest()
+    require(shell_digest == standard["shell_source_sha256"], "vendored Shell v2 source drift")
+    require(contract["shell"]["source_kit_sha256"] == shell_digest, "panel shell hash drift")
+    require(contract["shell"]["host_boundary"] == "ha-panel", "panel must bind to the Home Assistant host")
+    require(contract["shell"]["internal_tab_count"] == 4, "Access must retain four internal tabs")
+    require("position:fixed" not in shell_source, "Shell v2 must not bind to the browser window")
+    require("100vw" not in shell_source and "100vh" not in shell_source, "viewport units are forbidden in Shell v2")
     require(contract["panel"]["header"]["title_is_only_return_control"] is True, "duplicate return control allowed")
     require(contract["perimeters"]["diagnostic_inventory"] == "grouped_by_device", "perimeter diagnostics drift")
     require(contract["safety"]["label"] == "Безопасность", "safety label drift")

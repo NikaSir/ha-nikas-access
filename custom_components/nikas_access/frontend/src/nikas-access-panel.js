@@ -27,7 +27,7 @@ class NikasAccessPanel extends HTMLElement {
     this._tapSession = null;
     this._manualActivationTarget = null;
     this._manualActivationUntil = 0;
-    this._navigationProxy = null;
+    this._returnRoute = null;
     this._onResize = () => this.applyTransform();
     this._onKeyDown = (event) => {
       if (event.key === "Escape" && this._pendingCommand && !this._commandLock) {
@@ -75,55 +75,64 @@ class NikasAccessPanel extends HTMLElement {
   mountShell() {
     if (this._mounted) return;
     this._mounted = true;
+    this._returnRoute = captureNikasShellReturnRoute({
+      panelId: RETURN_PANEL_ID,
+      parentRoute: PARENT_ROUTE,
+      safeReturnRoute: SAFE_RETURN_ROUTE,
+    });
     this.shadowRoot.innerHTML = `
-      <style>${panelStyles()}</style>
-      <div class="app">
-        <header class="header">
-          <button class="shell-button menu" type="button" aria-label="Меню Home Assistant">
+      <style>${nikasShellV2Styles()}${panelStyles()}</style>
+      <div class="nikas-shell app" style="--nikas-shell-tab-count:4">
+        <header class="nikas-shell__header header">
+          <button class="nikas-shell__side-action shell-button menu" type="button" aria-label="Меню Home Assistant">
             <ha-icon icon="mdi:menu"></ha-icon>
           </button>
-          <button class="title-return" type="button" data-path="${HOME_PATH}" aria-label="Контроль доступа — вернуться в панель Дом">
+          <button class="nikas-shell__title title-return" type="button" data-return-home
+            aria-label="Контроль доступа — вернуться в исходную панель NikaS">
             <strong>Контроль доступа</strong>
             <small>UI v${UI_VERSION}</small>
           </button>
-          <button class="shell-button refresh" type="button" data-registry-retry
+          <button class="nikas-shell__side-action nikas-shell__side-action--right shell-button refresh"
+            type="button" data-registry-retry
             aria-label="Обновить реестры Home Assistant" title="Обновить реестры Home Assistant">
             <ha-icon icon="mdi:refresh"></ha-icon>
           </button>
         </header>
 
-        <main class="viewport" id="viewport">
-          <section class="canvas" id="canvas">
-            <div class="content">
-              <section class="error-banner" id="error-banner" role="alert" aria-live="assertive" hidden>
-                <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
-                <span>
-                  <strong>Команда не выполнена</strong>
-                  <small id="error-text"></small>
-                </span>
-                <button type="button" data-dismiss-error aria-label="Скрыть сообщение об ошибке">
-                  <ha-icon icon="mdi:close"></ha-icon>
-                </button>
-              </section>
-              ${renderStatusesView()}
-              ${renderGatesView()}
-              ${renderIntercomView()}
-              ${renderDiagnosticsView()}
+        <main class="nikas-shell__viewport viewport" id="viewport">
+          <section class="nikas-shell__canvas canvas" id="canvas">
+            <div class="nikas-shell__content content">
+              <div class="domain-content">
+                <section class="error-banner" id="error-banner" role="alert" aria-live="assertive" hidden>
+                  <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+                  <span>
+                    <strong>Команда не выполнена</strong>
+                    <small id="error-text"></small>
+                  </span>
+                  <button type="button" data-dismiss-error aria-label="Скрыть сообщение об ошибке">
+                    <ha-icon icon="mdi:close"></ha-icon>
+                  </button>
+                </section>
+                ${renderStatusesView()}
+                ${renderGatesView()}
+                ${renderIntercomView()}
+                ${renderDiagnosticsView()}
+              </div>
             </div>
           </section>
         </main>
 
-        <nav class="tabs" aria-label="Разделы панели Доступ">
-          <button type="button" class="active" data-view-target="statuses" aria-current="page" aria-label="Статусы">
+        <nav class="nikas-shell__tabs tabs" aria-label="Разделы панели Доступ">
+          <button type="button" class="nikas-shell__tab active" data-view-target="statuses" aria-current="page" aria-label="Статусы">
             <ha-icon icon="mdi:shield-home-outline"></ha-icon><small>Статусы</small>
           </button>
-          <button type="button" data-view-target="gates" aria-label="Ворота">
+          <button type="button" class="nikas-shell__tab" data-view-target="gates" aria-label="Ворота">
             <ha-icon icon="mdi:gate"></ha-icon><small>Ворота</small>
           </button>
-          <button type="button" data-view-target="intercom" aria-label="Домофон">
+          <button type="button" class="nikas-shell__tab" data-view-target="intercom" aria-label="Домофон">
             <ha-icon icon="mdi:doorbell-video"></ha-icon><small>Домофон</small>
           </button>
-          <button type="button" data-view-target="diagnostics" aria-label="Диагностика">
+          <button type="button" class="nikas-shell__tab" data-view-target="diagnostics" aria-label="Диагностика">
             <ha-icon icon="mdi:stethoscope"></ha-icon><small>Диагностика</small>
           </button>
         </nav>
@@ -141,7 +150,6 @@ class NikasAccessPanel extends HTMLElement {
           </div>
         </section>
 
-        <a class="navigation-proxy" id="navigation-proxy" href="${ROOT_PATH}" tabindex="-1" aria-hidden="true"></a>
         <div class="zoom-toast" aria-live="polite">Масштаб 100%</div>
         <div class="command-toast" aria-live="polite"></div>
       </div>`;
@@ -155,8 +163,6 @@ class NikasAccessPanel extends HTMLElement {
     this._errorText = this.shadowRoot.getElementById("error-text");
     this._zoomToast = this.shadowRoot.querySelector(".zoom-toast");
     this._commandToast = this.shadowRoot.querySelector(".command-toast");
-    this._navigationProxy = this.shadowRoot.getElementById("navigation-proxy");
-
     this.shadowRoot.addEventListener("click", (event) => this.controlClick(event));
     this.shadowRoot.addEventListener("pointerdown", (event) => this.tapPointerDown(event), { passive: true });
     this.shadowRoot.addEventListener("pointermove", (event) => this.tapPointerMove(event), { passive: true });
@@ -200,8 +206,8 @@ class NikasAccessPanel extends HTMLElement {
       void this.loadRegistries(true);
       return true;
     }
-    if (button.dataset?.path) {
-      this.navigate(button.dataset.path);
+    if (button.dataset?.returnHome !== undefined) {
+      navigateNikasShell(this._returnRoute);
       return true;
     }
     if (button.dataset?.command) {
@@ -652,19 +658,6 @@ class NikasAccessPanel extends HTMLElement {
           : "Нет данных канала управления";
       if (button.title !== title) button.title = title;
     }
-  }
-
-  navigate(path) {
-    if (!path || !path.startsWith("/")) return;
-    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    if (current === path) return;
-    const anchor = this._navigationProxy || this.shadowRoot?.getElementById("navigation-proxy");
-    if (!anchor) {
-      window.location.assign(path);
-      return;
-    }
-    anchor.href = path;
-    anchor.click();
   }
 
   loadZoom() {

@@ -7,6 +7,7 @@ const sourceRoot = join(root, "custom_components", "nikas_access", "frontend", "
 const outputPath = join(root, "custom_components", "nikas_access", "frontend", "nikas-access-panel.js");
 const sourceFiles = [
   "constants.js",
+  "shell-v2.js",
   "data/perimeters.js",
   "data/intercom.js",
   "views/statuses-view.js",
@@ -17,7 +18,7 @@ const sourceFiles = [
   "nikas-access-panel.js",
 ];
 
-const banner = `/* NikaS Access v0.1.4 | generated from frontend/src | do not edit bundle directly */\n`;
+const banner = `/* NikaS Access v0.1.5 | generated from frontend/src | do not edit bundle directly */\n`;
 const bundle = `${banner}${sourceFiles.map((file) => {
   const body = readFileSync(join(sourceRoot, file), "utf8").trimEnd();
   return `\n/* source: ${file} */\n${body}\n`;

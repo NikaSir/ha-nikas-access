@@ -1,12 +1,12 @@
 {
   "name": "ha-nikas-access",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:bundle": "node scripts/build.mjs --check",
     "check:frontend": "node scripts/check-panel.mjs",
-    "test": "node scripts/build.mjs --check && node scripts/check-panel.mjs && python -m unittest discover -s tests -v && python scripts/check_repository.py"
+    "test": "node scripts/build.mjs --check && node scripts/check-panel.mjs && node tests/shell_v2_harness.mjs && python -m unittest discover -s tests -v && python scripts/check_repository.py"
   }
 }
