@@ -7,7 +7,7 @@ function renderDiagnosticsView() {
       </div>
 
       <section class="diagnostic-card">
-        <h2>Периметры</h2>
+        <h2>Контрольные группы</h2>
         <div class="status-list">
           <div class="status-row tone-red" data-status="registry-status">
             <ha-icon icon="mdi:database-alert-outline"></ha-icon>
@@ -21,11 +21,15 @@ function renderDiagnosticsView() {
             <ha-icon icon="mdi:shield-alert-outline"></ha-icon>
             <span><small>Внешний периметр</small><strong data-status-text>Нет данных</strong></span>
           </div>
+          <div class="status-row tone-red" data-status="diagnostic-safety">
+            <ha-icon icon="mdi:shield-alert-outline"></ha-icon>
+            <span><small>Безопасность</small><strong data-status-text>Нет данных</strong></span>
+          </div>
         </div>
       </section>
 
       <section class="diagnostic-card perimeter-inventory-card">
-        <h2>Устройства периметров</h2>
+        <h2>Устройства контроля</h2>
         <p class="diagnostic-note">Показаны устройства и датчики, которые фактически входят в расчёт статусов.</p>
         <section class="perimeter-device-group" aria-labelledby="diagnostic-internal-devices-title">
           <div class="perimeter-device-group-heading">
@@ -48,6 +52,18 @@ function renderDiagnosticsView() {
             </span>
           </div>
           <div class="perimeter-device-list" data-perimeter-device-list="external">
+            <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
+          </div>
+        </section>
+        <section class="perimeter-device-group" aria-labelledby="diagnostic-safety-devices-title">
+          <div class="perimeter-device-group-heading">
+            <ha-icon icon="mdi:shield-alert-outline"></ha-icon>
+            <span>
+              <strong id="diagnostic-safety-devices-title">Безопасность</strong>
+              <small data-perimeter-device-count="safety">Устройств: 0 · датчиков: 0</small>
+            </span>
+          </div>
+          <div class="perimeter-device-list" data-perimeter-device-list="safety">
             <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
           </div>
         </section>

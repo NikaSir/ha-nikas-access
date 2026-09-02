@@ -31,11 +31,19 @@ function renderStatusesView() {
             <em data-status-detail>Ожидание реестров Home Assistant</em>
           </span>
         </article>
+        <article class="perimeter-card safety-card tone-red" data-status="safety" aria-live="assertive">
+          <span class="perimeter-icon"><ha-icon icon="mdi:shield-alert-outline"></ha-icon></span>
+          <span class="perimeter-copy">
+            <small>Безопасность</small>
+            <strong data-status-text>Нет данных</strong>
+            <em data-status-detail>Ожидание реестров Home Assistant</em>
+          </span>
+        </article>
       </div>
 
       <p class="source-note">
         <ha-icon icon="mdi:label-outline"></ha-icon>
-        Учитываются только действующие binary sensor с ярлыками периметров. Unknown и unavailable всегда означают «Нет данных».
+        Учитываются только действующие binary sensor с ярлыками периметров и безопасности. Unknown и unavailable всегда означают «Нет данных».
       </p>
     </section>`;
 }

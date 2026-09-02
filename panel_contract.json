@@ -2,7 +2,7 @@
   "schema_version": 1,
   "integration": {
     "domain": "nikas_access",
-    "version": "0.1.2"
+    "version": "0.1.3"
   },
   "panel": {
     "sidebar_title": "Доступ",
@@ -18,7 +18,7 @@
     ],
     "header": {
       "title_line_1": "Контроль доступа",
-      "title_line_2": "UI v0.1.2",
+      "title_line_2": "UI v0.1.3",
       "left_action": "home_assistant_menu",
       "right_action": "registry_refresh",
       "title_is_only_return_control": true
@@ -44,6 +44,37 @@
       "Внешний контур",
       "Наружный контур"
     ],
+    "label_metadata": {
+      "internal": {
+        "name": "Внутренний периметр",
+        "icon": "mdi:shield-home-outline",
+        "color": "cyan",
+        "description": "Датчики и устройства внутреннего контура дома: входные двери, окна и другие контролируемые проёмы."
+      },
+      "external": {
+        "name": "Внешний периметр",
+        "icon": "mdi:shield-lock-outline",
+        "color": "blue",
+        "description": "Датчики и устройства наружного контура участка: ворота, калитки, наружные двери и другие точки доступа."
+      }
+    },
+    "unknown_is_safe": false,
+    "unavailable_is_safe": false,
+    "diagnostic_inventory": "grouped_by_device"
+  },
+  "safety": {
+    "source": "home_assistant_labels",
+    "entity_domain": "binary_sensor",
+    "operational_label": "v_ekspluatatsii",
+    "label": "Безопасность",
+    "label_id_aliases": [
+      "bezopasnost"
+    ],
+    "icon": "mdi:shield-alert-outline",
+    "color": "red",
+    "description": "Датчики угроз для людей и дома: газ, дым, угарный газ, пожар и другие аварийные сигналы.",
+    "on": "Тревога",
+    "off": "Норма",
     "unknown_is_safe": false,
     "unavailable_is_safe": false,
     "diagnostic_inventory": "grouped_by_device"

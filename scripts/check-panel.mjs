@@ -60,11 +60,15 @@ requireContract(!frontend.includes('/dashboard-infrastructure/overview'), "botto
 requireContract(frontend.includes('config/entity_registry/list'), "perimeter entity registry lookup is missing");
 requireContract(frontend.includes('config/label_registry/list'), "perimeter label registry lookup is missing");
 requireContract(frontend.includes('const ACTIVE_LABEL = "v_ekspluatatsii"'), "operational perimeter filter is missing");
-requireContract(frontend.includes('function discoverPerimeterSources(registries)'), "perimeter source discovery is missing");
-requireContract(frontend.includes('function discoverPerimeterDevices(registries, sources)'), "perimeter device inventory is missing");
-requireContract(count(/data-perimeter-device-list="(?:internal|external)"/g) === 2, "both perimeter device lists are required");
-requireContract(frontend.includes("data-perimeter-source"), "diagnostic sensor state targets are missing");
-requireContract(frontend.includes("this.patchPerimeterDeviceStates()"), "diagnostic sensor states must update in place");
+requireContract(frontend.includes('function discoverAccessSources(registries)'), "access source discovery is missing");
+requireContract(frontend.includes('function discoverAccessDevices(registries, sources)'), "access device inventory is missing");
+requireContract(count(/data-perimeter-device-list="(?:internal|external|safety)"/g) === 3, "three control-group device lists are required");
+requireContract(frontend.includes("data-access-source"), "diagnostic sensor state targets are missing");
+requireContract(frontend.includes("this.patchAccessDeviceStates()"), "diagnostic sensor states must update in place");
+requireContract(frontend.includes('label: "Безопасность"'), "safety label is missing");
+requireContract(frontend.includes('icon: "mdi:shield-alert-outline"'), "safety label icon drift");
+requireContract(frontend.includes('function safetyModel(hass, entityIds)'), "safety state model is missing");
+requireContract(frontend.includes('title: "Тревога безопасности"'), "safety alarm summary is missing");
 requireContract(frontend.includes('state !== "off"'), "non-binary perimeter state must remain unavailable");
 
 const positionStart = frontend.indexOf("function sectionalPositionModel(hass)");
