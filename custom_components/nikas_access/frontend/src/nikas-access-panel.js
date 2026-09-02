@@ -5,7 +5,13 @@ class NikasAccessPanel extends HTMLElement {
     this._hass = null;
     this._panel = null;
     this._mounted = false;
+    this._activeView = "statuses";
     this._stateFrame = null;
+    this._registries = null;
+    this._registryLoading = false;
+    this._registryError = "";
+    this._registryLoadId = 0;
+    this._perimeterSources = { internal: [], external: [] };
     this._commandLock = false;
     this._pendingCommand = null;
     this._lastCommandAt = 0;
@@ -35,7 +41,10 @@ class NikasAccessPanel extends HTMLElement {
 
   set hass(value) {
     this._hass = value;
-    if (this._mounted) this.scheduleStatePatch();
+    if (this._mounted) {
+      this.scheduleStatePatch();
+      if (!this._registries && !this._registryLoading) void this.loadRegistries();
+    }
   }
 
   connectedCallback() {
@@ -47,6 +56,7 @@ class NikasAccessPanel extends HTMLElement {
     window.visualViewport?.addEventListener?.("resize", this._onResize, { passive: true });
     window.addEventListener("keydown", this._onKeyDown);
     this.scheduleStatePatch();
+    void this.loadRegistries();
   }
 
   disconnectedCallback() {
@@ -57,6 +67,7 @@ class NikasAccessPanel extends HTMLElement {
     window.clearTimeout(this._unlockTimer);
     window.clearTimeout(this._toastTimer);
     window.clearTimeout(this._zoomToastTimer);
+    this._registryLoadId += 1;
     this._stateFrame = null;
   }
 
@@ -72,24 +83,16 @@ class NikasAccessPanel extends HTMLElement {
           </button>
           <button class="title-return" type="button" data-path="${HOME_PATH}" aria-label="Контроль доступа — вернуться в панель Дом">
             <strong>Контроль доступа</strong>
-            <small>v${UI_VERSION}</small>
+            <small><span data-current-view>Статусы</span> · v${UI_VERSION}</small>
           </button>
-          <button class="shell-button info" type="button" data-entity="${SECTIONAL_POSITION_ENTITY}" aria-label="Открыть сведения о датчике секционных ворот">
-            <ha-icon icon="mdi:information-outline"></ha-icon>
+          <button class="shell-button info" type="button" data-view-target="diagnostics" aria-label="Открыть диагностику панели">
+            <ha-icon icon="mdi:stethoscope"></ha-icon>
           </button>
         </header>
 
         <main class="viewport" id="viewport">
           <section class="canvas" id="canvas">
             <div class="content">
-              <section class="summary-card tone-red" data-status="access-summary" aria-live="polite">
-                <span class="summary-icon"><ha-icon icon="mdi:shield-alert-outline"></ha-icon></span>
-                <span class="summary-copy">
-                  <strong data-status-text>Есть точки без данных</strong>
-                  <small data-status-detail>Ожидание данных Home Assistant</small>
-                </span>
-              </section>
-
               <section class="error-banner" id="error-banner" role="alert" aria-live="assertive" hidden>
                 <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
                 <span>
@@ -100,89 +103,26 @@ class NikasAccessPanel extends HTMLElement {
                   <ha-icon icon="mdi:close"></ha-icon>
                 </button>
               </section>
-
-              <div class="gate-grid">
-                <article class="gate-card" data-gate="sectional">
-                  <div class="gate-heading">
-                    <span class="gate-visual"><ha-icon icon="mdi:garage-variant"></ha-icon></span>
-                    <span><h2>Секционные ворота</h2><p>Положение — только по датчику</p></span>
-                  </div>
-                  <div class="status-list">
-                    <button class="status-row tone-red" type="button" data-status="sectional-position" data-entity="${SECTIONAL_POSITION_ENTITY}">
-                      <ha-icon icon="mdi:garage-alert-variant"></ha-icon>
-                      <span><small>Физическое положение</small><strong data-status-text>Нет данных</strong></span>
-                    </button>
-                    <button class="status-row tone-red" type="button" data-status="sectional-control" data-entity="${SECTIONAL_CONTROL_ENTITY}">
-                      <ha-icon icon="mdi:lan-disconnect"></ha-icon>
-                      <span><small>Канал управления</small><strong data-status-text>Нет данных управления</strong></span>
-                    </button>
-                  </div>
-                  <div class="command-label">Каждая команда требует подтверждения</div>
-                  <div class="command-grid" aria-label="Команды секционных ворот">
-                    <button class="command" type="button" data-command="sectional:open" disabled>
-                      <ha-icon icon="mdi:arrow-up-bold"></ha-icon><span>Открыть</span>
-                    </button>
-                    <button class="command stop" type="button" data-command="sectional:stop" disabled>
-                      <ha-icon icon="mdi:stop-circle-outline"></ha-icon><span>Стоп</span>
-                    </button>
-                    <button class="command" type="button" data-command="sectional:close" disabled>
-                      <ha-icon icon="mdi:arrow-down-bold"></ha-icon><span>Закрыть</span>
-                    </button>
-                  </div>
-                </article>
-
-                <article class="gate-card" data-gate="swing">
-                  <div class="gate-heading">
-                    <span class="gate-visual"><ha-icon icon="mdi:gate"></ha-icon></span>
-                    <span><h2>Распашные ворота</h2><p>Физического датчика нет</p></span>
-                  </div>
-                  <div class="status-list">
-                    <div class="position-note">
-                      <ha-icon icon="mdi:eye-off-outline"></ha-icon>
-                      <span><small>Физическое положение</small><strong>Положение не контролируется</strong></span>
-                    </div>
-                    <button class="status-row tone-red" type="button" data-status="swing-control" data-entity="${SWING_CONTROL_ENTITY}">
-                      <ha-icon icon="mdi:lan-disconnect"></ha-icon>
-                      <span><small>Канал управления</small><strong data-status-text>Нет данных управления</strong></span>
-                    </button>
-                  </div>
-                  <div class="command-label">Каждая команда требует подтверждения</div>
-                  <div class="command-grid" aria-label="Команды распашных ворот">
-                    <button class="command" type="button" data-command="swing:open" disabled>
-                      <ha-icon icon="mdi:gate-arrow-right"></ha-icon><span>Открыть</span>
-                    </button>
-                    <button class="command stop" type="button" data-command="swing:stop" disabled>
-                      <ha-icon icon="mdi:stop-circle-outline"></ha-icon><span>Стоп</span>
-                    </button>
-                    <button class="command" type="button" data-command="swing:close" disabled>
-                      <ha-icon icon="mdi:gate-arrow-left"></ha-icon><span>Закрыть</span>
-                    </button>
-                  </div>
-                </article>
-              </div>
-
-              ${INTERCOM_MODULE.enabled ? renderIntercomView() : ""}
-
-              <button class="return-home" type="button" data-path="${HOME_PATH}">
-                <ha-icon icon="mdi:home-import-outline"></ha-icon>
-                <span>Вернуться в панель «Дом»</span>
-              </button>
+              ${renderStatusesView()}
+              ${renderGatesView()}
+              ${renderIntercomView()}
+              ${renderDiagnosticsView()}
             </div>
           </section>
         </main>
 
-        <nav class="tabs" aria-label="Основные панели NikaS">
-          <button type="button" data-path="${HOME_PATH}" aria-label="Дом">
-            <ha-icon icon="mdi:home-outline"></ha-icon><small>Дом</small>
+        <nav class="tabs" aria-label="Разделы панели Доступ">
+          <button type="button" class="active" data-view-target="statuses" aria-current="page" aria-label="Статусы">
+            <ha-icon icon="mdi:shield-home-outline"></ha-icon><small>Статусы</small>
           </button>
-          <button type="button" class="active" aria-current="page" aria-label="Доступ" disabled>
-            <ha-icon icon="mdi:gate"></ha-icon><small>Доступ</small>
+          <button type="button" data-view-target="gates" aria-label="Ворота">
+            <ha-icon icon="mdi:gate"></ha-icon><small>Ворота</small>
           </button>
-          <button type="button" data-path="/dashboard-actions/home" aria-label="Действия">
-            <ha-icon icon="mdi:lightning-bolt-outline"></ha-icon><small>Действия</small>
+          <button type="button" data-view-target="intercom" aria-label="Домофон">
+            <ha-icon icon="mdi:doorbell-video"></ha-icon><small>Домофон</small>
           </button>
-          <button type="button" data-path="/dashboard-infrastructure/overview" aria-label="Инфраструктура">
-            <ha-icon icon="mdi:server-network"></ha-icon><small>Инфра</small>
+          <button type="button" data-view-target="diagnostics" aria-label="Диагностика">
+            <ha-icon icon="mdi:stethoscope"></ha-icon><small>Диагностика</small>
           </button>
         </nav>
 
@@ -214,6 +154,7 @@ class NikasAccessPanel extends HTMLElement {
     this._zoomToast = this.shadowRoot.querySelector(".zoom-toast");
     this._commandToast = this.shadowRoot.querySelector(".command-toast");
     this._navigationProxy = this.shadowRoot.getElementById("navigation-proxy");
+    this._currentViewLabel = this.shadowRoot.querySelector("[data-current-view]");
 
     this.shadowRoot.addEventListener("click", (event) => this.controlClick(event));
     this.shadowRoot.addEventListener("pointerdown", (event) => this.tapPointerDown(event), { passive: true });
@@ -250,6 +191,14 @@ class NikasAccessPanel extends HTMLElement {
       }));
       return true;
     }
+    if (button.dataset?.viewTarget) {
+      this.activateView(button.dataset.viewTarget);
+      return true;
+    }
+    if (button.dataset?.registryRetry !== undefined) {
+      void this.loadRegistries(true);
+      return true;
+    }
     if (button.dataset?.path) {
       this.navigate(button.dataset.path);
       return true;
@@ -271,6 +220,32 @@ class NikasAccessPanel extends HTMLElement {
       return true;
     }
     return false;
+  }
+
+  activateView(viewId) {
+    const view = INTERNAL_VIEWS[viewId];
+    if (!view) return;
+    this._activeView = view.id;
+    for (const panel of this.shadowRoot.querySelectorAll("[data-view-panel]")) {
+      const active = panel.dataset.viewPanel === view.id;
+      panel.hidden = !active;
+      panel.classList.toggle("active", active);
+    }
+    for (const button of this.shadowRoot.querySelectorAll("[data-view-target]")) {
+      if (!button.closest(".tabs")) continue;
+      const active = button.dataset.viewTarget === view.id;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    }
+    if (this._currentViewLabel?.textContent !== view.label) this._currentViewLabel.textContent = view.label;
+    this._viewport?.scrollTo({ left: 0, top: 0 });
+    if (this._zoom.scale > 1.03) {
+      this._zoom.x = 0;
+      this._zoom.y = 0;
+    }
+    window.requestAnimationFrame(() => this.applyTransform());
+    this.scheduleStatePatch();
   }
 
   controlClick(event) {
@@ -335,6 +310,90 @@ class NikasAccessPanel extends HTMLElement {
     if (event.pointerType !== "touch") return;
     this._touchPointers.delete(event.pointerId);
     if (this._tapSession?.pointerId === event.pointerId) this._tapSession = null;
+  }
+
+  registryTransport() {
+    if (typeof this._hass?.callWS === "function") {
+      return (message) => this._hass.callWS(message);
+    }
+    if (typeof this._hass?.connection?.sendMessagePromise === "function") {
+      return (message) => this._hass.connection.sendMessagePromise(message);
+    }
+    return null;
+  }
+
+  registryValues(value) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return Object.values(value);
+    return null;
+  }
+
+  hassRegistrySnapshot() {
+    const devices = this.registryValues(this._hass?.devices);
+    const entities = this.registryValues(this._hass?.entities);
+    if (!devices || !entities) return null;
+    return {
+      devices,
+      entities,
+      labels: this.registryValues(this._hass?.labels) || [],
+    };
+  }
+
+  async registryRequest(type) {
+    const transport = this.registryTransport();
+    if (!transport) throw new Error("Соединение Home Assistant ещё не готово");
+    return transport({ type });
+  }
+
+  applyRegistries(registries) {
+    this._registries = registries;
+    this._perimeterSources = discoverPerimeterSources(registries);
+    this._registryError = "";
+    this.scheduleStatePatch();
+  }
+
+  async loadRegistries(force = false) {
+    if (this._registryLoading) return;
+    if (this._registries && !force) return;
+    const loadId = ++this._registryLoadId;
+    this._registryLoading = true;
+    this._registryError = "";
+    this.scheduleStatePatch();
+
+    try {
+      let snapshot = this.hassRegistrySnapshot();
+      if (!snapshot) {
+        const [devices, entities] = await Promise.all([
+          this.registryRequest("config/device_registry/list"),
+          this.registryRequest("config/entity_registry/list"),
+        ]);
+        if (!Array.isArray(devices) || !Array.isArray(entities)) {
+          throw new Error("Home Assistant вернул некорректные реестры");
+        }
+        snapshot = { devices, entities, labels: [] };
+      }
+
+      if (snapshot.labels.length === 0 && this.registryTransport()) {
+        try {
+          const labels = await this.registryRequest("config/label_registry/list");
+          if (Array.isArray(labels)) snapshot.labels = labels;
+        } catch (_error) {
+          // Stable label ids remain sufficient when names are unavailable.
+        }
+      }
+
+      if (loadId !== this._registryLoadId) return;
+      this.applyRegistries(snapshot);
+    } catch (error) {
+      if (loadId !== this._registryLoadId) return;
+      this._registryError = errorText(error);
+      this.scheduleStatePatch();
+    } finally {
+      if (loadId === this._registryLoadId) {
+        this._registryLoading = false;
+        this.scheduleStatePatch();
+      }
+    }
   }
 
   openConfirmation(commandKey) {
@@ -427,11 +486,64 @@ class NikasAccessPanel extends HTMLElement {
 
   patchStates() {
     if (!this._mounted || !this.isConnected) return;
-    this.patchStatus("access-summary", accessSummaryModel(this._hass));
-    this.patchStatus("sectional-position", sectionalPositionModel(this._hass));
-    this.patchStatus("sectional-control", gateControlModel(this._hass, GATES.sectional));
-    this.patchStatus("swing-control", gateControlModel(this._hass, GATES.swing));
+    const internal = perimeterModel(
+      this._hass,
+      this._perimeterSources.internal,
+      PERIMETER_DEFINITIONS.internal,
+    );
+    const external = perimeterModel(
+      this._hass,
+      this._perimeterSources.external,
+      PERIMETER_DEFINITIONS.external,
+    );
+    const sectionalPosition = sectionalPositionModel(this._hass);
+    const sectionalControl = gateControlModel(this._hass, GATES.sectional);
+    const swingControl = gateControlModel(this._hass, GATES.swing);
+
+    this.patchStatus("access-summary", accessSummaryModel(internal, external));
+    this.patchStatus("perimeter-internal", internal);
+    this.patchStatus("perimeter-external", external);
+    this.patchStatus("sectional-position", sectionalPosition);
+    this.patchStatus("sectional-control", sectionalControl);
+    this.patchStatus("swing-control", swingControl);
+    this.patchStatus("registry-status", this.registryStatusModel());
+    this.patchStatus("diagnostic-internal", this.perimeterDiagnosticModel(internal));
+    this.patchStatus("diagnostic-external", this.perimeterDiagnosticModel(external));
+    this.patchStatus("diagnostic-sectional-position", sectionalPosition);
+    this.patchStatus("diagnostic-sectional-control", sectionalControl);
+    this.patchStatus("diagnostic-swing-control", swingControl);
     this.patchCommandLocks();
+  }
+
+  registryStatusModel() {
+    if (this._registryLoading) {
+      return { text: "Загрузка реестров", tone: "blue", icon: "mdi:database-sync-outline" };
+    }
+    if (this._registryError) {
+      return { text: `Ошибка: ${this._registryError}`, tone: "red", icon: "mdi:database-alert-outline" };
+    }
+    if (this._registries) {
+      return { text: "Реестры загружены", tone: "green", icon: "mdi:database-check-outline" };
+    }
+    return { text: "Ожидание соединения", tone: "red", icon: "mdi:database-alert-outline" };
+  }
+
+  perimeterDiagnosticModel(model) {
+    if (model.total === 0) {
+      return { text: "Действующие датчики не найдены", tone: "red", icon: "mdi:shield-alert-outline" };
+    }
+    if (model.unavailable > 0) {
+      return {
+        text: `${model.total} датч. · без данных: ${model.unavailable}`,
+        tone: "red",
+        icon: "mdi:shield-alert-outline",
+      };
+    }
+    return {
+      text: `${model.total} датч. · данные доступны`,
+      tone: model.open > 0 ? "yellow" : "green",
+      icon: model.open > 0 ? "mdi:shield-off-outline" : "mdi:shield-check-outline",
+    };
   }
 
   patchStatus(name, model) {

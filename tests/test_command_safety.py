@@ -13,7 +13,10 @@ class CommandSafetyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.constants = (SOURCE / "constants.js").read_text(encoding="utf-8")
-        cls.panel = (SOURCE / "nikas-access-panel.js").read_text(encoding="utf-8")
+        cls.panel = (
+            (SOURCE / "nikas-access-panel.js").read_text(encoding="utf-8")
+            + (SOURCE / "views" / "gates-view.js").read_text(encoding="utf-8")
+        )
         cls.contract = json.loads((ROOT / "panel_contract.json").read_text(encoding="utf-8"))
 
     def test_only_approved_entities_are_used(self) -> None:

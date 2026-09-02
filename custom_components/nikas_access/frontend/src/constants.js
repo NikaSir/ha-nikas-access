@@ -1,5 +1,5 @@
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.0";
+const UI_VERSION = "0.1.1";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const HOME_PATH = "/dashboard-house-v12/home";
@@ -14,6 +14,13 @@ const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
 const SECTIONAL_POSITION_ENTITY = "binary_sensor.sensor_do_zb_15_16_contact";
 const SECTIONAL_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_door";
 const SWING_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_2_door";
+
+const INTERNAL_VIEWS = Object.freeze({
+  statuses: Object.freeze({ id: "statuses", label: "Статусы", icon: "mdi:shield-home-outline" }),
+  gates: Object.freeze({ id: "gates", label: "Ворота", icon: "mdi:gate" }),
+  intercom: Object.freeze({ id: "intercom", label: "Домофон", icon: "mdi:doorbell-video" }),
+  diagnostics: Object.freeze({ id: "diagnostics", label: "Диагностика", icon: "mdi:stethoscope" }),
+});
 
 const GATES = Object.freeze({
   sectional: Object.freeze({
@@ -108,35 +115,6 @@ function gateControlModel(hass, gate) {
     return { text: "Управление доступно", tone: "green", icon: "mdi:lan-connect" };
   }
   return { text: "Нет данных управления", tone: "red", icon: "mdi:lan-disconnect" };
-}
-
-function accessSummaryModel(hass) {
-  const sectionalControl = gateControlModel(hass, GATES.sectional);
-  const swingControl = gateControlModel(hass, GATES.swing);
-  const position = sectionalPositionModel(hass);
-
-  if (sectionalControl.tone === "red" || swingControl.tone === "red" || position.tone === "red") {
-    return {
-      title: "Есть точки без данных",
-      detail: "Проверьте датчик и каналы управления",
-      tone: "red",
-      icon: "mdi:shield-alert-outline",
-    };
-  }
-  if (position.text === "Открыто") {
-    return {
-      title: "Секционные ворота открыты",
-      detail: "Оба канала управления доступны",
-      tone: "yellow",
-      icon: "mdi:shield-home-outline",
-    };
-  }
-  return {
-    title: "Секционные ворота закрыты",
-    detail: "Оба канала управления доступны",
-    tone: "grey",
-    icon: "mdi:shield-check-outline",
-  };
 }
 
 function commandAvailable(hass, command) {

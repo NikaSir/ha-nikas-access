@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -52,11 +53,36 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("anchor.click()", self.source)
         self.assertNotIn("history.back(", self.source)
 
-    def test_intercom_module_is_reserved_but_hidden(self) -> None:
+    def test_bottom_navigation_is_internal_and_ordered(self) -> None:
+        nav_start = self.source.index('<nav class="tabs"')
+        nav_end = self.source.index("</nav>", nav_start)
+        nav = self.source[nav_start:nav_end]
+        targets = re.findall(r'data-view-target="([a-z]+)"', nav)
+        self.assertEqual(targets, ["statuses", "gates", "intercom", "diagnostics"])
+        self.assertNotIn("data-path=", nav)
+        self.assertNotIn("/dashboard-actions/", nav)
+        self.assertNotIn("/dashboard-infrastructure/", nav)
+        self.assertIn('this._activeView = "statuses"', self.source)
+
+    def test_all_internal_views_share_one_working_area(self) -> None:
+        self.assertEqual(self.source.count('data-view-panel="statuses"'), 1)
+        self.assertEqual(self.source.count('data-view-panel="gates"'), 1)
+        self.assertEqual(self.source.count('data-view-panel="intercom"'), 1)
+        self.assertEqual(self.source.count('data-view-panel="diagnostics"'), 1)
+        self.assertIn("activateView(viewId)", self.source)
+        self.assertNotIn("history.pushState", self.source)
+
+    def test_intercom_module_is_visible_but_has_no_entities_or_controls(self) -> None:
         self.assertIn("const INTERCOM_MODULE = Object.freeze", self.source)
         self.assertIn("enabled: false", self.source)
         self.assertIn("entityIds: Object.freeze({})", self.source)
-        self.assertIn('INTERCOM_MODULE.enabled ? renderIntercomView() : ""', self.source)
+        self.assertIn("${renderIntercomView()}", self.source)
+        self.assertIn("Сущности домофона не назначены", self.source)
+        intercom_start = self.source.index("function renderIntercomView()")
+        intercom_end = self.source.index("function renderDiagnosticsView()", intercom_start)
+        intercom = self.source[intercom_start:intercom_end]
+        self.assertNotIn("data-command", intercom)
+        self.assertNotRegex(intercom, r'(?:binary_sensor|camera|lock|button|switch)\.[a-z0-9_]+')
 
 
 if __name__ == "__main__":

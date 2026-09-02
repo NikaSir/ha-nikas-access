@@ -25,9 +25,9 @@ def main() -> None:
     frontend = (DOMAIN / "frontend" / "nikas-access-panel.js").read_text(encoding="utf-8")
 
     require(manifest["domain"] == "nikas_access", "integration domain drift")
-    require(manifest["version"] == "0.1.0", "integration version drift")
-    require(panel_manifest["ui_version"] == "0.1.0", "panel version drift")
-    require(contract["integration"]["version"] == "0.1.0", "contract version drift")
+    require(manifest["version"] == "0.1.1", "integration version drift")
+    require(panel_manifest["ui_version"] == "0.1.1", "panel version drift")
+    require(contract["integration"]["version"] == "0.1.1", "contract version drift")
     require(standard["standard_version"] == "1.17", "NikaS UI standard drift")
     require(panel_manifest["entry_route"] == "/dashboard-access-v1/home", "entry route drift")
     require(panel_manifest["parent_route"] == "/dashboard-house-v12/home", "parent route drift")
@@ -40,6 +40,9 @@ def main() -> None:
     require(frontend.count("class NikasAccessPanel") == 1, "one frontend panel class required")
     require(frontend.count("customElements.define(ELEMENT_NAME") == 1, "one custom element registration required")
     require("shadowRoot.innerHTML" in frontend, "initial shell mount missing")
+    require(contract["panel"]["internal_views"] == ["statuses", "gates", "intercom", "diagnostics"], "internal navigation drift")
+    require(contract["perimeters"]["unknown_is_safe"] is False, "unknown perimeter state must not be safe")
+    require(contract["perimeters"]["unavailable_is_safe"] is False, "unavailable perimeter state must not be safe")
 
     subprocess.run(["node", "--check", str(DOMAIN / "frontend" / "nikas-access-panel.js")], check=True)
     subprocess.run(["node", str(ROOT / "scripts" / "build.mjs"), "--check"], check=True)
