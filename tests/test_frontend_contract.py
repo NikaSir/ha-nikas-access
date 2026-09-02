@@ -90,12 +90,23 @@ class FrontendContractTests(unittest.TestCase):
         self.assertNotIn("history.pushState", self.source)
 
     def test_diagnostics_lists_perimeter_devices_and_sensors(self) -> None:
-        self.assertIn("function discoverPerimeterDevices(registries, sources)", self.source)
+        self.assertIn("function discoverAccessDevices(registries, sources)", self.source)
         self.assertEqual(self.source.count('data-perimeter-device-list="internal"'), 1)
         self.assertEqual(self.source.count('data-perimeter-device-list="external"'), 1)
-        self.assertIn("data-perimeter-source", self.source)
-        self.assertIn("this.patchPerimeterDeviceStates()", self.source)
+        self.assertEqual(self.source.count('data-perimeter-device-list="safety"'), 1)
+        self.assertIn("data-access-source", self.source)
+        self.assertIn("this.patchAccessDeviceStates()", self.source)
         self.assertIn("hass-more-info", self.source)
+
+    def test_safety_label_has_fail_safe_state_model(self) -> None:
+        self.assertIn('label: "Безопасность"', self.source)
+        self.assertIn('icon: "mdi:shield-alert-outline"', self.source)
+        self.assertIn('"bezopasnost"', self.source)
+        self.assertIn("function safetyModel(hass, entityIds)", self.source)
+        self.assertIn('title: "Тревога"', self.source)
+        self.assertIn('title: "Норма"', self.source)
+        self.assertIn('data-status="safety"', self.source)
+        self.assertIn('data-status="diagnostic-safety"', self.source)
 
     def test_intercom_module_is_visible_but_has_no_entities_or_controls(self) -> None:
         self.assertIn("const INTERCOM_MODULE = Object.freeze", self.source)

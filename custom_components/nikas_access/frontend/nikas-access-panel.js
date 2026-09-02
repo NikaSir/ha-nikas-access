@@ -1,8 +1,8 @@
-/* NikaS Access v0.1.2 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.3 | generated from frontend/src | do not edit bundle directly */
 
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.2";
+const UI_VERSION = "0.1.3";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const HOME_PATH = "/dashboard-house-v12/home";
@@ -152,6 +152,8 @@ const PERIMETER_DEFINITIONS = Object.freeze({
     key: "internal",
     label: "Внутренний периметр",
     icon: "mdi:shield-home-outline",
+    recommendedColor: "cyan",
+    description: "Датчики и устройства внутреннего контура дома: входные двери, окна и другие контролируемые проёмы",
     aliases: Object.freeze([
       "vnutrennii_perimetr",
       "vnutrennii_kontur",
@@ -163,6 +165,8 @@ const PERIMETER_DEFINITIONS = Object.freeze({
     key: "external",
     label: "Внешний периметр",
     icon: "mdi:shield-lock-outline",
+    recommendedColor: "blue",
+    description: "Датчики и устройства наружного контура участка: ворота, калитки, наружные двери и другие точки доступа",
     aliases: Object.freeze([
       "vneshnii_perimetr",
       "naruzhnyi_perimetr",
@@ -174,6 +178,23 @@ const PERIMETER_DEFINITIONS = Object.freeze({
       "наружный контур",
     ]),
   }),
+});
+
+const SAFETY_DEFINITION = Object.freeze({
+  key: "safety",
+  label: "Безопасность",
+  icon: "mdi:shield-alert-outline",
+  recommendedColor: "red",
+  description: "Датчики угроз для людей и дома: газ, дым, угарный газ, пожар и другие аварийные сигналы",
+  aliases: Object.freeze([
+    "bezopasnost",
+    "безопасность",
+  ]),
+});
+
+const ACCESS_DEFINITIONS = Object.freeze({
+  ...PERIMETER_DEFINITIONS,
+  safety: SAFETY_DEFINITION,
 });
 
 function labelsOf(item) {
@@ -216,12 +237,12 @@ function isOperationalLabelSet(keys) {
   return ![...EXCLUDED_OPERATIONAL_LABELS].some((label) => keys.has(label));
 }
 
-function matchesPerimeter(keys, definition) {
+function matchesAccessGroup(keys, definition) {
   return definition.aliases.some((alias) => keys.has(normalizedLabel(alias)));
 }
 
-function discoverPerimeterSources(registries) {
-  const empty = { internal: [], external: [] };
+function discoverAccessSources(registries) {
+  const empty = { internal: [], external: [], safety: [] };
   if (!registries) return empty;
 
   const entities = Array.isArray(registries.entities) ? registries.entities : [];
@@ -229,7 +250,7 @@ function discoverPerimeterSources(registries) {
   const labels = Array.isArray(registries.labels) ? registries.labels : [];
   const deviceMap = new Map(devices.map((device) => [device.id, device]));
   const labelNames = new Map(labels.map((label) => [label.label_id, label.name || label.label_id]));
-  const result = { internal: [], external: [] };
+  const result = { internal: [], external: [], safety: [] };
 
   for (const entity of entities) {
     const entityId = String(entity?.entity_id || "");
@@ -240,13 +261,14 @@ function discoverPerimeterSources(registries) {
     const keys = combinedLabelKeys(entity, device, labelNames);
     if (!isOperationalLabelSet(keys)) continue;
 
-    for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
-      if (matchesPerimeter(keys, definition)) result[definition.key].push(entityId);
+    for (const definition of Object.values(ACCESS_DEFINITIONS)) {
+      if (matchesAccessGroup(keys, definition)) result[definition.key].push(entityId);
     }
   }
 
   result.internal.sort();
   result.external.sort();
+  result.safety.sort();
   return result;
 }
 
@@ -265,17 +287,17 @@ function entityDisplayName(entity) {
     || "Датчик без названия";
 }
 
-function discoverPerimeterDevices(registries, sources) {
-  const empty = { internal: [], external: [] };
+function discoverAccessDevices(registries, sources) {
+  const empty = { internal: [], external: [], safety: [] };
   if (!registries) return empty;
 
   const entities = Array.isArray(registries.entities) ? registries.entities : [];
   const devices = Array.isArray(registries.devices) ? registries.devices : [];
   const entityMap = new Map(entities.map((entity) => [entity.entity_id, entity]));
   const deviceMap = new Map(devices.map((device) => [device.id, device]));
-  const result = { internal: [], external: [] };
+  const result = { internal: [], external: [], safety: [] };
 
-  for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
+  for (const definition of Object.values(ACCESS_DEFINITIONS)) {
     const groups = new Map();
     for (const entityId of sources?.[definition.key] || []) {
       const entity = entityMap.get(entityId) || { entity_id: entityId };
@@ -313,6 +335,19 @@ function perimeterSourceStateModel(hass, entityId) {
   return { text: "Нет данных", tone: "red", icon: "mdi:alert-circle-outline" };
 }
 
+function safetySourceStateModel(hass, entityId) {
+  const state = normalizedState(stateObject(hass, entityId)?.state);
+  if (state === "on") return { text: "Тревога", tone: "red", icon: "mdi:alert-octagon-outline" };
+  if (state === "off") return { text: "Норма", tone: "green", icon: "mdi:shield-check-outline" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:alert-circle-outline" };
+}
+
+function accessSourceStateModel(hass, entityId, definition) {
+  return definition?.key === SAFETY_DEFINITION.key
+    ? safetySourceStateModel(hass, entityId)
+    : perimeterSourceStateModel(hass, entityId);
+}
+
 function perimeterModel(hass, entityIds, definition) {
   const ids = Array.isArray(entityIds) ? entityIds : [];
   if (ids.length === 0) {
@@ -324,6 +359,7 @@ function perimeterModel(hass, entityIds, definition) {
       total: 0,
       open: 0,
       unavailable: 0,
+      status: "no_data",
     };
   }
 
@@ -345,6 +381,7 @@ function perimeterModel(hass, entityIds, definition) {
       total: ids.length,
       open,
       unavailable,
+      status: "no_data",
     };
   }
   if (open > 0) {
@@ -356,6 +393,7 @@ function perimeterModel(hass, entityIds, definition) {
       total: ids.length,
       open,
       unavailable: 0,
+      status: "violated",
     };
   }
   return {
@@ -366,15 +404,84 @@ function perimeterModel(hass, entityIds, definition) {
     total: ids.length,
     open: 0,
     unavailable: 0,
+    status: "safe",
   };
 }
 
-function accessSummaryModel(internal, external) {
-  const models = [internal, external];
+function safetyModel(hass, entityIds) {
+  const ids = Array.isArray(entityIds) ? entityIds : [];
+  if (ids.length === 0) {
+    return {
+      title: "Нет данных",
+      detail: `Не найдены действующие датчики с ярлыком «${SAFETY_DEFINITION.label}»`,
+      tone: "red",
+      icon: "mdi:shield-alert-outline",
+      total: 0,
+      open: 0,
+      unavailable: 0,
+      status: "no_data",
+    };
+  }
+
+  let alarms = 0;
+  let unavailable = 0;
+  for (const entityId of ids) {
+    const state = normalizedState(stateObject(hass, entityId)?.state);
+    if (state === "on") alarms += 1;
+    else if (state !== "off") unavailable += 1;
+  }
+
+  if (alarms > 0) {
+    const unavailableDetail = unavailable > 0 ? ` · без данных: ${unavailable}` : "";
+    return {
+      title: "Тревога",
+      detail: `Сработало: ${alarms} из ${ids.length}${unavailableDetail}`,
+      tone: "red",
+      icon: "mdi:alert-octagon-outline",
+      total: ids.length,
+      open: alarms,
+      unavailable,
+      status: "alarm",
+    };
+  }
+  if (unavailable > 0) {
+    return {
+      title: "Нет данных",
+      detail: `Без данных: ${unavailable} из ${ids.length}`,
+      tone: "red",
+      icon: "mdi:shield-alert-outline",
+      total: ids.length,
+      open: 0,
+      unavailable,
+      status: "no_data",
+    };
+  }
+  return {
+    title: "Норма",
+    detail: `Контролируется датчиков: ${ids.length}`,
+    tone: "green",
+    icon: "mdi:shield-check-outline",
+    total: ids.length,
+    open: 0,
+    unavailable: 0,
+    status: "safe",
+  };
+}
+
+function accessSummaryModel(internal, external, safety) {
+  const models = [internal, external, safety];
+  if (safety.status === "alarm") {
+    return {
+      title: "Тревога безопасности",
+      detail: `Сработало датчиков: ${safety.open}`,
+      tone: "red",
+      icon: "mdi:alert-octagon-outline",
+    };
+  }
   if (models.some((model) => model.tone === "red")) {
     return {
       title: "Есть точки без данных",
-      detail: "Ни один периметр с неполными данными не считается закрытым",
+      detail: "Периметры и безопасность с неполными данными не считаются нормой",
       tone: "red",
       icon: "mdi:shield-alert-outline",
     };
@@ -388,8 +495,8 @@ function accessSummaryModel(internal, external) {
     };
   }
   return {
-    title: "Периметры закрыты",
-    detail: "Внутренний и внешний периметры без открытых точек",
+    title: "Доступ под контролем",
+    detail: "Периметры закрыты, датчики безопасности в норме",
     tone: "green",
     icon: "mdi:shield-check-outline",
   };
@@ -442,11 +549,19 @@ function renderStatusesView() {
             <em data-status-detail>Ожидание реестров Home Assistant</em>
           </span>
         </article>
+        <article class="perimeter-card safety-card tone-red" data-status="safety" aria-live="assertive">
+          <span class="perimeter-icon"><ha-icon icon="mdi:shield-alert-outline"></ha-icon></span>
+          <span class="perimeter-copy">
+            <small>Безопасность</small>
+            <strong data-status-text>Нет данных</strong>
+            <em data-status-detail>Ожидание реестров Home Assistant</em>
+          </span>
+        </article>
       </div>
 
       <p class="source-note">
         <ha-icon icon="mdi:label-outline"></ha-icon>
-        Учитываются только действующие binary sensor с ярлыками периметров. Unknown и unavailable всегда означают «Нет данных».
+        Учитываются только действующие binary sensor с ярлыками периметров и безопасности. Unknown и unavailable всегда означают «Нет данных».
       </p>
     </section>`;
 }
@@ -558,7 +673,7 @@ function renderDiagnosticsView() {
       </div>
 
       <section class="diagnostic-card">
-        <h2>Периметры</h2>
+        <h2>Контрольные группы</h2>
         <div class="status-list">
           <div class="status-row tone-red" data-status="registry-status">
             <ha-icon icon="mdi:database-alert-outline"></ha-icon>
@@ -572,11 +687,15 @@ function renderDiagnosticsView() {
             <ha-icon icon="mdi:shield-alert-outline"></ha-icon>
             <span><small>Внешний периметр</small><strong data-status-text>Нет данных</strong></span>
           </div>
+          <div class="status-row tone-red" data-status="diagnostic-safety">
+            <ha-icon icon="mdi:shield-alert-outline"></ha-icon>
+            <span><small>Безопасность</small><strong data-status-text>Нет данных</strong></span>
+          </div>
         </div>
       </section>
 
       <section class="diagnostic-card perimeter-inventory-card">
-        <h2>Устройства периметров</h2>
+        <h2>Устройства контроля</h2>
         <p class="diagnostic-note">Показаны устройства и датчики, которые фактически входят в расчёт статусов.</p>
         <section class="perimeter-device-group" aria-labelledby="diagnostic-internal-devices-title">
           <div class="perimeter-device-group-heading">
@@ -599,6 +718,18 @@ function renderDiagnosticsView() {
             </span>
           </div>
           <div class="perimeter-device-list" data-perimeter-device-list="external">
+            <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
+          </div>
+        </section>
+        <section class="perimeter-device-group" aria-labelledby="diagnostic-safety-devices-title">
+          <div class="perimeter-device-group-heading">
+            <ha-icon icon="mdi:shield-alert-outline"></ha-icon>
+            <span>
+              <strong id="diagnostic-safety-devices-title">Безопасность</strong>
+              <small data-perimeter-device-count="safety">Устройств: 0 · датчиков: 0</small>
+            </span>
+          </div>
+          <div class="perimeter-device-list" data-perimeter-device-list="safety">
             <p class="empty-diagnostic">Ожидание реестров Home Assistant</p>
           </div>
         </section>
@@ -720,6 +851,7 @@ function panelStyles() {
       border-radius:22px;background:color-mix(in srgb,var(--summary-color,#7b858f) 5%,var(--card-background-color,#fff));
       box-shadow:0 8px 25px rgba(23,45,76,.065);display:grid;grid-template-columns:50px minmax(0,1fr);gap:12px;align-items:center
     }
+    .perimeter-card.safety-card{grid-column:1/-1;min-height:112px}
     .perimeter-icon{width:50px;height:50px;border-radius:17px;display:grid;place-items:center;background:color-mix(in srgb,var(--summary-color,#7b858f) 13%,transparent);color:var(--summary-color,#7b858f)}
     .perimeter-icon ha-icon{--mdc-icon-size:31px}.perimeter-copy{min-width:0;display:grid;gap:3px}
     .perimeter-copy small{font-size:12px;font-weight:700;color:var(--secondary-text-color,#68737d)}
@@ -869,8 +1001,8 @@ class NikasAccessPanel extends HTMLElement {
     this._registryLoading = false;
     this._registryError = "";
     this._registryLoadId = 0;
-    this._perimeterSources = { internal: [], external: [] };
-    this._perimeterDevices = { internal: [], external: [] };
+    this._accessSources = { internal: [], external: [], safety: [] };
+    this._accessDevices = { internal: [], external: [], safety: [] };
     this._commandLock = false;
     this._pendingCommand = null;
     this._lastCommandAt = 0;
@@ -1205,16 +1337,16 @@ class NikasAccessPanel extends HTMLElement {
 
   applyRegistries(registries) {
     this._registries = registries;
-    this._perimeterSources = discoverPerimeterSources(registries);
-    this._perimeterDevices = discoverPerimeterDevices(registries, this._perimeterSources);
+    this._accessSources = discoverAccessSources(registries);
+    this._accessDevices = discoverAccessDevices(registries, this._accessSources);
     this._registryError = "";
-    this.renderPerimeterDevices();
+    this.renderAccessDevices();
     this.scheduleStatePatch();
   }
 
-  renderPerimeterDevices() {
-    for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
-      const groups = this._perimeterDevices[definition.key] || [];
+  renderAccessDevices() {
+    for (const definition of Object.values(ACCESS_DEFINITIONS)) {
+      const groups = this._accessDevices[definition.key] || [];
       const list = this.shadowRoot.querySelector(`[data-perimeter-device-list="${definition.key}"]`);
       const count = this.shadowRoot.querySelector(`[data-perimeter-device-count="${definition.key}"]`);
       const sensorCount = groups.reduce((total, group) => total + group.entities.length, 0);
@@ -1236,11 +1368,12 @@ class NikasAccessPanel extends HTMLElement {
           </div>
           <div class="perimeter-source-list">
             ${group.entities.map((entity) => {
-              const state = perimeterSourceStateModel(this._hass, entity.entityId);
+              const state = accessSourceStateModel(this._hass, entity.entityId, definition);
               const friendlyName = stateObject(this._hass, entity.entityId)?.attributes?.friendly_name || entity.name;
               return `
                 <button class="perimeter-source tone-${state.tone}" type="button"
-                  data-entity="${escapeHtml(entity.entityId)}" data-perimeter-source="${escapeHtml(entity.entityId)}">
+                  data-entity="${escapeHtml(entity.entityId)}" data-access-source="${escapeHtml(entity.entityId)}"
+                  data-access-group="${escapeHtml(definition.key)}">
                   <ha-icon icon="${escapeHtml(state.icon)}"></ha-icon>
                   <span>
                     <strong>${escapeHtml(friendlyName)}</strong>
@@ -1390,38 +1523,42 @@ class NikasAccessPanel extends HTMLElement {
     if (!this._mounted || !this.isConnected) return;
     const internal = perimeterModel(
       this._hass,
-      this._perimeterSources.internal,
+      this._accessSources.internal,
       PERIMETER_DEFINITIONS.internal,
     );
     const external = perimeterModel(
       this._hass,
-      this._perimeterSources.external,
+      this._accessSources.external,
       PERIMETER_DEFINITIONS.external,
     );
+    const safety = safetyModel(this._hass, this._accessSources.safety);
     const sectionalPosition = sectionalPositionModel(this._hass);
     const sectionalControl = gateControlModel(this._hass, GATES.sectional);
     const swingControl = gateControlModel(this._hass, GATES.swing);
 
-    this.patchStatus("access-summary", accessSummaryModel(internal, external));
+    this.patchStatus("access-summary", accessSummaryModel(internal, external, safety));
     this.patchStatus("perimeter-internal", internal);
     this.patchStatus("perimeter-external", external);
+    this.patchStatus("safety", safety);
     this.patchStatus("sectional-position", sectionalPosition);
     this.patchStatus("sectional-control", sectionalControl);
     this.patchStatus("swing-control", swingControl);
     this.patchStatus("registry-status", this.registryStatusModel());
-    this.patchStatus("diagnostic-internal", this.perimeterDiagnosticModel(internal));
-    this.patchStatus("diagnostic-external", this.perimeterDiagnosticModel(external));
+    this.patchStatus("diagnostic-internal", this.accessGroupDiagnosticModel(internal));
+    this.patchStatus("diagnostic-external", this.accessGroupDiagnosticModel(external));
+    this.patchStatus("diagnostic-safety", this.accessGroupDiagnosticModel(safety));
     this.patchStatus("diagnostic-sectional-position", sectionalPosition);
     this.patchStatus("diagnostic-sectional-control", sectionalControl);
     this.patchStatus("diagnostic-swing-control", swingControl);
-    this.patchPerimeterDeviceStates();
+    this.patchAccessDeviceStates();
     this.patchRegistryRefresh();
     this.patchCommandLocks();
   }
 
-  patchPerimeterDeviceStates() {
-    for (const node of this.shadowRoot.querySelectorAll("[data-perimeter-source]")) {
-      const model = perimeterSourceStateModel(this._hass, node.dataset.perimeterSource);
+  patchAccessDeviceStates() {
+    for (const node of this.shadowRoot.querySelectorAll("[data-access-source]")) {
+      const definition = ACCESS_DEFINITIONS[node.dataset.accessGroup];
+      const model = accessSourceStateModel(this._hass, node.dataset.accessSource, definition);
       const text = node.querySelector("[data-source-state]");
       const icon = node.querySelector("ha-icon");
       if (text?.textContent !== model.text) text.textContent = model.text;
@@ -1453,9 +1590,17 @@ class NikasAccessPanel extends HTMLElement {
     return { text: "Ожидание соединения", tone: "red", icon: "mdi:database-alert-outline" };
   }
 
-  perimeterDiagnosticModel(model) {
+  accessGroupDiagnosticModel(model) {
     if (model.total === 0) {
       return { text: "Действующие датчики не найдены", tone: "red", icon: "mdi:shield-alert-outline" };
+    }
+    if (model.status === "alarm") {
+      const missing = model.unavailable > 0 ? ` · без данных: ${model.unavailable}` : "";
+      return {
+        text: `${model.total} датч. · тревога: ${model.open}${missing}`,
+        tone: "red",
+        icon: "mdi:alert-octagon-outline",
+      };
     }
     if (model.unavailable > 0) {
       return {
@@ -1466,8 +1611,8 @@ class NikasAccessPanel extends HTMLElement {
     }
     return {
       text: `${model.total} датч. · данные доступны`,
-      tone: model.open > 0 ? "yellow" : "green",
-      icon: model.open > 0 ? "mdi:shield-off-outline" : "mdi:shield-check-outline",
+      tone: model.status === "violated" ? "yellow" : "green",
+      icon: model.status === "violated" ? "mdi:shield-off-outline" : "mdi:shield-check-outline",
     };
   }
 

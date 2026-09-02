@@ -86,6 +86,7 @@ function panelStyles() {
       border-radius:22px;background:color-mix(in srgb,var(--summary-color,#7b858f) 5%,var(--card-background-color,#fff));
       box-shadow:0 8px 25px rgba(23,45,76,.065);display:grid;grid-template-columns:50px minmax(0,1fr);gap:12px;align-items:center
     }
+    .perimeter-card.safety-card{grid-column:1/-1;min-height:112px}
     .perimeter-icon{width:50px;height:50px;border-radius:17px;display:grid;place-items:center;background:color-mix(in srgb,var(--summary-color,#7b858f) 13%,transparent);color:var(--summary-color,#7b858f)}
     .perimeter-icon ha-icon{--mdc-icon-size:31px}.perimeter-copy{min-width:0;display:grid;gap:3px}
     .perimeter-copy small{font-size:12px;font-weight:700;color:var(--secondary-text-color,#68737d)}

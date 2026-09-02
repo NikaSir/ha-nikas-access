@@ -11,6 +11,8 @@ const PERIMETER_DEFINITIONS = Object.freeze({
     key: "internal",
     label: "Внутренний периметр",
     icon: "mdi:shield-home-outline",
+    recommendedColor: "cyan",
+    description: "Датчики и устройства внутреннего контура дома: входные двери, окна и другие контролируемые проёмы",
     aliases: Object.freeze([
       "vnutrennii_perimetr",
       "vnutrennii_kontur",
@@ -22,6 +24,8 @@ const PERIMETER_DEFINITIONS = Object.freeze({
     key: "external",
     label: "Внешний периметр",
     icon: "mdi:shield-lock-outline",
+    recommendedColor: "blue",
+    description: "Датчики и устройства наружного контура участка: ворота, калитки, наружные двери и другие точки доступа",
     aliases: Object.freeze([
       "vneshnii_perimetr",
       "naruzhnyi_perimetr",
@@ -33,6 +37,23 @@ const PERIMETER_DEFINITIONS = Object.freeze({
       "наружный контур",
     ]),
   }),
+});
+
+const SAFETY_DEFINITION = Object.freeze({
+  key: "safety",
+  label: "Безопасность",
+  icon: "mdi:shield-alert-outline",
+  recommendedColor: "red",
+  description: "Датчики угроз для людей и дома: газ, дым, угарный газ, пожар и другие аварийные сигналы",
+  aliases: Object.freeze([
+    "bezopasnost",
+    "безопасность",
+  ]),
+});
+
+const ACCESS_DEFINITIONS = Object.freeze({
+  ...PERIMETER_DEFINITIONS,
+  safety: SAFETY_DEFINITION,
 });
 
 function labelsOf(item) {
@@ -75,12 +96,12 @@ function isOperationalLabelSet(keys) {
   return ![...EXCLUDED_OPERATIONAL_LABELS].some((label) => keys.has(label));
 }
 
-function matchesPerimeter(keys, definition) {
+function matchesAccessGroup(keys, definition) {
   return definition.aliases.some((alias) => keys.has(normalizedLabel(alias)));
 }
 
-function discoverPerimeterSources(registries) {
-  const empty = { internal: [], external: [] };
+function discoverAccessSources(registries) {
+  const empty = { internal: [], external: [], safety: [] };
   if (!registries) return empty;
 
   const entities = Array.isArray(registries.entities) ? registries.entities : [];
@@ -88,7 +109,7 @@ function discoverPerimeterSources(registries) {
   const labels = Array.isArray(registries.labels) ? registries.labels : [];
   const deviceMap = new Map(devices.map((device) => [device.id, device]));
   const labelNames = new Map(labels.map((label) => [label.label_id, label.name || label.label_id]));
-  const result = { internal: [], external: [] };
+  const result = { internal: [], external: [], safety: [] };
 
   for (const entity of entities) {
     const entityId = String(entity?.entity_id || "");
@@ -99,13 +120,14 @@ function discoverPerimeterSources(registries) {
     const keys = combinedLabelKeys(entity, device, labelNames);
     if (!isOperationalLabelSet(keys)) continue;
 
-    for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
-      if (matchesPerimeter(keys, definition)) result[definition.key].push(entityId);
+    for (const definition of Object.values(ACCESS_DEFINITIONS)) {
+      if (matchesAccessGroup(keys, definition)) result[definition.key].push(entityId);
     }
   }
 
   result.internal.sort();
   result.external.sort();
+  result.safety.sort();
   return result;
 }
 
@@ -124,17 +146,17 @@ function entityDisplayName(entity) {
     || "Датчик без названия";
 }
 
-function discoverPerimeterDevices(registries, sources) {
-  const empty = { internal: [], external: [] };
+function discoverAccessDevices(registries, sources) {
+  const empty = { internal: [], external: [], safety: [] };
   if (!registries) return empty;
 
   const entities = Array.isArray(registries.entities) ? registries.entities : [];
   const devices = Array.isArray(registries.devices) ? registries.devices : [];
   const entityMap = new Map(entities.map((entity) => [entity.entity_id, entity]));
   const deviceMap = new Map(devices.map((device) => [device.id, device]));
-  const result = { internal: [], external: [] };
+  const result = { internal: [], external: [], safety: [] };
 
-  for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
+  for (const definition of Object.values(ACCESS_DEFINITIONS)) {
     const groups = new Map();
     for (const entityId of sources?.[definition.key] || []) {
       const entity = entityMap.get(entityId) || { entity_id: entityId };
@@ -172,6 +194,19 @@ function perimeterSourceStateModel(hass, entityId) {
   return { text: "Нет данных", tone: "red", icon: "mdi:alert-circle-outline" };
 }
 
+function safetySourceStateModel(hass, entityId) {
+  const state = normalizedState(stateObject(hass, entityId)?.state);
+  if (state === "on") return { text: "Тревога", tone: "red", icon: "mdi:alert-octagon-outline" };
+  if (state === "off") return { text: "Норма", tone: "green", icon: "mdi:shield-check-outline" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:alert-circle-outline" };
+}
+
+function accessSourceStateModel(hass, entityId, definition) {
+  return definition?.key === SAFETY_DEFINITION.key
+    ? safetySourceStateModel(hass, entityId)
+    : perimeterSourceStateModel(hass, entityId);
+}
+
 function perimeterModel(hass, entityIds, definition) {
   const ids = Array.isArray(entityIds) ? entityIds : [];
   if (ids.length === 0) {
@@ -183,6 +218,7 @@ function perimeterModel(hass, entityIds, definition) {
       total: 0,
       open: 0,
       unavailable: 0,
+      status: "no_data",
     };
   }
 
@@ -204,6 +240,7 @@ function perimeterModel(hass, entityIds, definition) {
       total: ids.length,
       open,
       unavailable,
+      status: "no_data",
     };
   }
   if (open > 0) {
@@ -215,6 +252,7 @@ function perimeterModel(hass, entityIds, definition) {
       total: ids.length,
       open,
       unavailable: 0,
+      status: "violated",
     };
   }
   return {
@@ -225,15 +263,84 @@ function perimeterModel(hass, entityIds, definition) {
     total: ids.length,
     open: 0,
     unavailable: 0,
+    status: "safe",
   };
 }
 
-function accessSummaryModel(internal, external) {
-  const models = [internal, external];
+function safetyModel(hass, entityIds) {
+  const ids = Array.isArray(entityIds) ? entityIds : [];
+  if (ids.length === 0) {
+    return {
+      title: "Нет данных",
+      detail: `Не найдены действующие датчики с ярлыком «${SAFETY_DEFINITION.label}»`,
+      tone: "red",
+      icon: "mdi:shield-alert-outline",
+      total: 0,
+      open: 0,
+      unavailable: 0,
+      status: "no_data",
+    };
+  }
+
+  let alarms = 0;
+  let unavailable = 0;
+  for (const entityId of ids) {
+    const state = normalizedState(stateObject(hass, entityId)?.state);
+    if (state === "on") alarms += 1;
+    else if (state !== "off") unavailable += 1;
+  }
+
+  if (alarms > 0) {
+    const unavailableDetail = unavailable > 0 ? ` · без данных: ${unavailable}` : "";
+    return {
+      title: "Тревога",
+      detail: `Сработало: ${alarms} из ${ids.length}${unavailableDetail}`,
+      tone: "red",
+      icon: "mdi:alert-octagon-outline",
+      total: ids.length,
+      open: alarms,
+      unavailable,
+      status: "alarm",
+    };
+  }
+  if (unavailable > 0) {
+    return {
+      title: "Нет данных",
+      detail: `Без данных: ${unavailable} из ${ids.length}`,
+      tone: "red",
+      icon: "mdi:shield-alert-outline",
+      total: ids.length,
+      open: 0,
+      unavailable,
+      status: "no_data",
+    };
+  }
+  return {
+    title: "Норма",
+    detail: `Контролируется датчиков: ${ids.length}`,
+    tone: "green",
+    icon: "mdi:shield-check-outline",
+    total: ids.length,
+    open: 0,
+    unavailable: 0,
+    status: "safe",
+  };
+}
+
+function accessSummaryModel(internal, external, safety) {
+  const models = [internal, external, safety];
+  if (safety.status === "alarm") {
+    return {
+      title: "Тревога безопасности",
+      detail: `Сработало датчиков: ${safety.open}`,
+      tone: "red",
+      icon: "mdi:alert-octagon-outline",
+    };
+  }
   if (models.some((model) => model.tone === "red")) {
     return {
       title: "Есть точки без данных",
-      detail: "Ни один периметр с неполными данными не считается закрытым",
+      detail: "Периметры и безопасность с неполными данными не считаются нормой",
       tone: "red",
       icon: "mdi:shield-alert-outline",
     };
@@ -247,8 +354,8 @@ function accessSummaryModel(internal, external) {
     };
   }
   return {
-    title: "Периметры закрыты",
-    detail: "Внутренний и внешний периметры без открытых точек",
+    title: "Доступ под контролем",
+    detail: "Периметры закрыты, датчики безопасности в норме",
     tone: "green",
     icon: "mdi:shield-check-outline",
   };

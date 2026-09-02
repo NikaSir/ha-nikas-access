@@ -11,8 +11,8 @@ class NikasAccessPanel extends HTMLElement {
     this._registryLoading = false;
     this._registryError = "";
     this._registryLoadId = 0;
-    this._perimeterSources = { internal: [], external: [] };
-    this._perimeterDevices = { internal: [], external: [] };
+    this._accessSources = { internal: [], external: [], safety: [] };
+    this._accessDevices = { internal: [], external: [], safety: [] };
     this._commandLock = false;
     this._pendingCommand = null;
     this._lastCommandAt = 0;
@@ -347,16 +347,16 @@ class NikasAccessPanel extends HTMLElement {
 
   applyRegistries(registries) {
     this._registries = registries;
-    this._perimeterSources = discoverPerimeterSources(registries);
-    this._perimeterDevices = discoverPerimeterDevices(registries, this._perimeterSources);
+    this._accessSources = discoverAccessSources(registries);
+    this._accessDevices = discoverAccessDevices(registries, this._accessSources);
     this._registryError = "";
-    this.renderPerimeterDevices();
+    this.renderAccessDevices();
     this.scheduleStatePatch();
   }
 
-  renderPerimeterDevices() {
-    for (const definition of Object.values(PERIMETER_DEFINITIONS)) {
-      const groups = this._perimeterDevices[definition.key] || [];
+  renderAccessDevices() {
+    for (const definition of Object.values(ACCESS_DEFINITIONS)) {
+      const groups = this._accessDevices[definition.key] || [];
       const list = this.shadowRoot.querySelector(`[data-perimeter-device-list="${definition.key}"]`);
       const count = this.shadowRoot.querySelector(`[data-perimeter-device-count="${definition.key}"]`);
       const sensorCount = groups.reduce((total, group) => total + group.entities.length, 0);
@@ -378,11 +378,12 @@ class NikasAccessPanel extends HTMLElement {
           </div>
           <div class="perimeter-source-list">
             ${group.entities.map((entity) => {
-              const state = perimeterSourceStateModel(this._hass, entity.entityId);
+              const state = accessSourceStateModel(this._hass, entity.entityId, definition);
               const friendlyName = stateObject(this._hass, entity.entityId)?.attributes?.friendly_name || entity.name;
               return `
                 <button class="perimeter-source tone-${state.tone}" type="button"
-                  data-entity="${escapeHtml(entity.entityId)}" data-perimeter-source="${escapeHtml(entity.entityId)}">
+                  data-entity="${escapeHtml(entity.entityId)}" data-access-source="${escapeHtml(entity.entityId)}"
+                  data-access-group="${escapeHtml(definition.key)}">
                   <ha-icon icon="${escapeHtml(state.icon)}"></ha-icon>
                   <span>
                     <strong>${escapeHtml(friendlyName)}</strong>
@@ -532,38 +533,42 @@ class NikasAccessPanel extends HTMLElement {
     if (!this._mounted || !this.isConnected) return;
     const internal = perimeterModel(
       this._hass,
-      this._perimeterSources.internal,
+      this._accessSources.internal,
       PERIMETER_DEFINITIONS.internal,
     );
     const external = perimeterModel(
       this._hass,
-      this._perimeterSources.external,
+      this._accessSources.external,
       PERIMETER_DEFINITIONS.external,
     );
+    const safety = safetyModel(this._hass, this._accessSources.safety);
     const sectionalPosition = sectionalPositionModel(this._hass);
     const sectionalControl = gateControlModel(this._hass, GATES.sectional);
     const swingControl = gateControlModel(this._hass, GATES.swing);
 
-    this.patchStatus("access-summary", accessSummaryModel(internal, external));
+    this.patchStatus("access-summary", accessSummaryModel(internal, external, safety));
     this.patchStatus("perimeter-internal", internal);
     this.patchStatus("perimeter-external", external);
+    this.patchStatus("safety", safety);
     this.patchStatus("sectional-position", sectionalPosition);
     this.patchStatus("sectional-control", sectionalControl);
     this.patchStatus("swing-control", swingControl);
     this.patchStatus("registry-status", this.registryStatusModel());
-    this.patchStatus("diagnostic-internal", this.perimeterDiagnosticModel(internal));
-    this.patchStatus("diagnostic-external", this.perimeterDiagnosticModel(external));
+    this.patchStatus("diagnostic-internal", this.accessGroupDiagnosticModel(internal));
+    this.patchStatus("diagnostic-external", this.accessGroupDiagnosticModel(external));
+    this.patchStatus("diagnostic-safety", this.accessGroupDiagnosticModel(safety));
     this.patchStatus("diagnostic-sectional-position", sectionalPosition);
     this.patchStatus("diagnostic-sectional-control", sectionalControl);
     this.patchStatus("diagnostic-swing-control", swingControl);
-    this.patchPerimeterDeviceStates();
+    this.patchAccessDeviceStates();
     this.patchRegistryRefresh();
     this.patchCommandLocks();
   }
 
-  patchPerimeterDeviceStates() {
-    for (const node of this.shadowRoot.querySelectorAll("[data-perimeter-source]")) {
-      const model = perimeterSourceStateModel(this._hass, node.dataset.perimeterSource);
+  patchAccessDeviceStates() {
+    for (const node of this.shadowRoot.querySelectorAll("[data-access-source]")) {
+      const definition = ACCESS_DEFINITIONS[node.dataset.accessGroup];
+      const model = accessSourceStateModel(this._hass, node.dataset.accessSource, definition);
       const text = node.querySelector("[data-source-state]");
       const icon = node.querySelector("ha-icon");
       if (text?.textContent !== model.text) text.textContent = model.text;
@@ -595,9 +600,17 @@ class NikasAccessPanel extends HTMLElement {
     return { text: "Ожидание соединения", tone: "red", icon: "mdi:database-alert-outline" };
   }
 
-  perimeterDiagnosticModel(model) {
+  accessGroupDiagnosticModel(model) {
     if (model.total === 0) {
       return { text: "Действующие датчики не найдены", tone: "red", icon: "mdi:shield-alert-outline" };
+    }
+    if (model.status === "alarm") {
+      const missing = model.unavailable > 0 ? ` · без данных: ${model.unavailable}` : "";
+      return {
+        text: `${model.total} датч. · тревога: ${model.open}${missing}`,
+        tone: "red",
+        icon: "mdi:alert-octagon-outline",
+      };
     }
     if (model.unavailable > 0) {
       return {
@@ -608,8 +621,8 @@ class NikasAccessPanel extends HTMLElement {
     }
     return {
       text: `${model.total} датч. · данные доступны`,
-      tone: model.open > 0 ? "yellow" : "green",
-      icon: model.open > 0 ? "mdi:shield-off-outline" : "mdi:shield-check-outline",
+      tone: model.status === "violated" ? "yellow" : "green",
+      icon: model.status === "violated" ? "mdi:shield-off-outline" : "mdi:shield-check-outline",
     };
   }
 

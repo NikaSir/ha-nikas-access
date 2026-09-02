@@ -16,7 +16,7 @@ class PerimeterSafetyTests(unittest.TestCase):
         cls.contract = json.loads((ROOT / "panel_contract.json").read_text(encoding="utf-8"))
 
     def test_sources_are_discovered_from_registries_not_invented_ids(self) -> None:
-        self.assertIn("function discoverPerimeterSources(registries)", self.perimeters)
+        self.assertIn("function discoverAccessSources(registries)", self.perimeters)
         self.assertIn('entityId.startsWith("binary_sensor.")', self.perimeters)
         self.assertIn('const ACTIVE_LABEL = "v_ekspluatatsii"', self.perimeters)
         self.assertNotRegex(self.perimeters, r'"binary_sensor\.[a-z0-9_]+"')
@@ -31,12 +31,20 @@ class PerimeterSafetyTests(unittest.TestCase):
         self.assertIn("isOperationalLabelSet(keys)", self.perimeters)
 
     def test_diagnostic_inventory_uses_discovered_sources(self) -> None:
-        self.assertIn("function discoverPerimeterDevices(registries, sources)", self.perimeters)
+        self.assertIn("function discoverAccessDevices(registries, sources)", self.perimeters)
         self.assertIn("for (const entityId of sources?.[definition.key] || [])", self.perimeters)
-        self.assertIn("this._perimeterDevices = discoverPerimeterDevices", self.panel)
+        self.assertIn("this._accessDevices = discoverAccessDevices", self.panel)
         self.assertIn('data-perimeter-device-list="${definition.key}"', self.panel)
-        self.assertIn("data-perimeter-source", self.panel)
+        self.assertIn("data-access-source", self.panel)
         self.assertEqual(self.contract["perimeters"]["diagnostic_inventory"], "grouped_by_device")
+
+    def test_safety_label_is_separate_and_fail_safe(self) -> None:
+        self.assertIn('label: "Безопасность"', self.perimeters)
+        self.assertIn('"bezopasnost"', self.perimeters)
+        self.assertIn("function safetyModel(hass, entityIds)", self.perimeters)
+        self.assertIn('status: "alarm"', self.perimeters)
+        self.assertFalse(self.contract["safety"]["unknown_is_safe"])
+        self.assertFalse(self.contract["safety"]["unavailable_is_safe"])
 
     def test_unknown_or_unavailable_never_becomes_closed(self) -> None:
         start = self.perimeters.index("function perimeterModel(")
@@ -56,7 +64,7 @@ class PerimeterSafetyTests(unittest.TestCase):
         self.assertNotIn("replaceChildren", body)
         self.assertIn('this.patchStatus("perimeter-internal"', body)
         self.assertIn('this.patchStatus("perimeter-external"', body)
-        self.assertIn("this.patchPerimeterDeviceStates()", body)
+        self.assertIn("this.patchAccessDeviceStates()", body)
 
 
 if __name__ == "__main__":
