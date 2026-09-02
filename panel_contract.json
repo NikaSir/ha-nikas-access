@@ -2,14 +2,43 @@
   "schema_version": 1,
   "integration": {
     "domain": "nikas_access",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "panel": {
     "sidebar_title": "Доступ",
     "page_title": "Контроль доступа",
     "root": "dashboard-access-v1",
     "entry_route": "/dashboard-access-v1/home",
-    "parent_route": "/dashboard-house-v12/home"
+    "parent_route": "/dashboard-house-v12/home",
+    "internal_views": [
+      "statuses",
+      "gates",
+      "intercom",
+      "diagnostics"
+    ]
+  },
+  "perimeters": {
+    "source": "home_assistant_labels",
+    "entity_domain": "binary_sensor",
+    "operational_label": "v_ekspluatatsii",
+    "excluded_labels": [
+      "na_obsluzhivanii",
+      "trebuet_zameny",
+      "vyvedeno_iz_ekspluatatsii",
+      "rezerv"
+    ],
+    "internal_labels": [
+      "Внутренний периметр",
+      "Внутренний контур"
+    ],
+    "external_labels": [
+      "Внешний периметр",
+      "Наружный периметр",
+      "Внешний контур",
+      "Наружный контур"
+    ],
+    "unknown_is_safe": false,
+    "unavailable_is_safe": false
   },
   "sectional_gate": {
     "position_entity": "binary_sensor.sensor_do_zb_15_16_contact",
@@ -33,6 +62,7 @@
     "cover.close_cover"
   ],
   "intercom": {
+    "visible": true,
     "enabled": false,
     "entity_ids": {}
   }

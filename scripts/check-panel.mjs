@@ -22,6 +22,8 @@ function count(pattern) {
 requireContract(count(/<main class="viewport" id="viewport">/g) === 1, "one working viewport required");
 requireContract(count(/<header class="header">/g) === 1, "one fixed header required");
 requireContract(count(/<nav class="tabs"/g) === 1, "one fixed bottom navigation required");
+requireContract(count(/data-view-target="(?:statuses|gates|intercom|diagnostics)"/g) === 5, "four internal tabs and one diagnostics shortcut required");
+requireContract(count(/data-view-panel="(?:statuses|gates|intercom|diagnostics)"/g) === 4, "four internal views required");
 requireContract(count(/data-command="(?:sectional|swing):(?:open|stop|close)"/g) === 6, "six explicit gate commands required");
 requireContract(!frontend.includes("<iframe"), "iframe is forbidden");
 requireContract(!/^\s*import\s/m.test(frontend) && !frontend.includes("import("), "production bundle must be autonomous");
@@ -37,7 +39,15 @@ requireContract(frontend.includes("COMMAND_COOLDOWN_MS"), "command deduplication
 requireContract(frontend.includes("Объект: «${command.objectLabel}». Действие: «${command.actionLabel}»"), "confirmation must name object and action");
 requireContract(frontend.includes("this.showPersistentError"), "persistent command error is missing");
 requireContract(frontend.includes("Положение не контролируется"), "swing gate warning is missing");
-requireContract(frontend.includes("INTERCOM_MODULE.enabled ? renderIntercomView() : \"\""), "disabled intercom boundary is missing");
+requireContract(frontend.includes("${renderIntercomView()}"), "intercom internal view is missing");
+requireContract(frontend.includes("Сущности домофона не назначены"), "intercom placeholder must disclose missing entities");
+requireContract(!frontend.includes('/dashboard-actions/home'), "bottom navigation must not leave the Access panel for Actions");
+requireContract(!frontend.includes('/dashboard-infrastructure/overview'), "bottom navigation must not leave the Access panel for Infrastructure");
+requireContract(frontend.includes('config/entity_registry/list'), "perimeter entity registry lookup is missing");
+requireContract(frontend.includes('config/label_registry/list'), "perimeter label registry lookup is missing");
+requireContract(frontend.includes('const ACTIVE_LABEL = "v_ekspluatatsii"'), "operational perimeter filter is missing");
+requireContract(frontend.includes('function discoverPerimeterSources(registries)'), "perimeter source discovery is missing");
+requireContract(frontend.includes('state !== "off"'), "non-binary perimeter state must remain unavailable");
 
 const positionStart = frontend.indexOf("function sectionalPositionModel(hass)");
 const positionEnd = frontend.indexOf("function gateControlModel", positionStart);
@@ -53,5 +63,6 @@ const patchBody = frontend.slice(patchStart, patchEnd);
 requireContract(patchStart >= 0 && patchEnd > patchStart, "targeted state patch is missing");
 requireContract(!patchBody.includes("innerHTML"), "state updates must not rebuild Shadow DOM");
 requireContract(!patchBody.includes("replaceChildren"), "state updates must not replace the working view");
+requireContract(!patchBody.includes("innerHTML"), "telemetry patch must not rebuild an internal view");
 
 console.log("frontend contract checks passed");

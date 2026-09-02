@@ -1,8 +1,8 @@
 {
   "standard": "NikaS specialized panel UI",
   "standard_version": "1.17",
-  "integration_version": "0.1.0",
-  "ui_version": "0.1.0",
+  "integration_version": "0.1.1",
+  "ui_version": "0.1.1",
   "route": "/dashboard-access-v1/home",
   "parent_route": "/dashboard-house-v12/home",
   "viewport_count": 1,
@@ -19,5 +19,8 @@
   "optimistic_position": false,
   "command_confirmation": true,
   "command_deduplication": true,
-  "intercom_visible": false
+  "internal_tabs": ["statuses", "gates", "intercom", "diagnostics"],
+  "perimeter_source": "home-assistant-label-registry",
+  "intercom_visible": true,
+  "intercom_controls_enabled": false
 }
