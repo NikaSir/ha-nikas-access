@@ -12,7 +12,7 @@
   "bottom_nav_body_px": 64,
   "content_max_width_px": 1280,
   "shell_source": "custom_components/nikas_access/frontend/src/shell-v2.js",
-  "shell_source_sha256": "732bcd1872b02bc7804d84dc2607f8c56e43d67e6bc9251fb453b54d499ebe19",
+  "shell_source_sha256": "84ba1e2d9db4e1f77af4efb418d10c43967b647a8cc52cb06962c326e02dae76",
   "shell_delivery": "vendored-build-time",
   "viewport_count": 1,
   "fixed_header": true,

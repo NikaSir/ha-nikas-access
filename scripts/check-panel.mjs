@@ -47,6 +47,9 @@ requireContract(!/^\s*import\s/m.test(frontend) && !frontend.includes("import(")
 requireContract(frontend.includes('const ROOT_PATH = "/dashboard-access-v1/home"'), "entry route drift");
 requireContract(frontend.includes('const PARENT_ROUTE = "/dashboard-house-v13/home"'), "parent route drift");
 requireContract(frontend.includes('const NIKAS_SHELL_V2_VERSION = "2.1"'), "Shell v2 source is missing");
+requireContract(frontend.includes("padding:2px 3px 6px"), "bottom-tab label clearance is missing");
+requireContract(frontend.includes("--mdc-icon-size:26px"), "bottom-tab icon must fit the 52px target row");
+requireContract(frontend.includes("line-height:14px"), "bottom-tab label line box must be explicit");
 requireContract(frontend.includes("captureNikasShellReturnRoute"), "source-aware Header return is missing");
 requireContract(frontend.includes('new Event("location-changed")'), "explicit Home Assistant navigation is missing");
 requireContract(!frontend.includes("position:fixed"), "panel must not bind to the browser window");
