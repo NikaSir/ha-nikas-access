@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "integration": {
+    "domain": "nikas_access",
+    "version": "0.1.0"
+  },
+  "panel": {
+    "sidebar_title": "Доступ",
+    "page_title": "Контроль доступа",
+    "root": "dashboard-access-v1",
+    "entry_route": "/dashboard-access-v1/home",
+    "parent_route": "/dashboard-house-v12/home"
+  },
+  "sectional_gate": {
+    "position_entity": "binary_sensor.sensor_do_zb_15_16_contact",
+    "control_entity": "cover.umnyi_kontroller_dlia_vorot_roximo_door",
+    "position_source": "contact_sensor_only",
+    "states": {
+      "on": "Открыто",
+      "off": "Закрыто",
+      "unknown": "Нет данных",
+      "unavailable": "Нет данных"
+    }
+  },
+  "swing_gate": {
+    "control_entity": "cover.umnyi_kontroller_dlia_vorot_roximo_2_door",
+    "position_source": "none",
+    "position_label": "Положение не контролируется"
+  },
+  "commands": [
+    "cover.open_cover",
+    "cover.stop_cover",
+    "cover.close_cover"
+  ],
+  "intercom": {
+    "enabled": false,
+    "entity_ids": {}
+  }
+}

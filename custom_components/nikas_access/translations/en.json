@@ -1,0 +1,14 @@
+{
+  "title": "Access",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Access panel",
+        "description": "Add the autonomous home access control panel."
+      }
+    },
+    "abort": {
+      "already_configured": "The Access panel is already configured."
+    }
+  }
+}
