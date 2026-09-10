@@ -6,6 +6,7 @@ on:
       - fix/a19-standard-v2-2
     paths:
       - scripts/apply_a19_v22.py
+      - scripts/fix_a19_gate.py
       - .github/workflows/apply-a19-v22.yml
   workflow_dispatch:
 
@@ -28,6 +29,8 @@ jobs:
           node-version: "22"
       - name: Apply A19 migration
         run: python scripts/apply_a19_v22.py
+      - name: Align A19 contract gate
+        run: python scripts/fix_a19_gate.py
       - name: Build canonical production bundle
         run: node scripts/build.mjs
       - name: Install test dependencies
@@ -35,7 +38,7 @@ jobs:
       - name: Run full repository test suite
         run: npm test
       - name: Remove one-shot migration machinery
-        run: git rm -f --ignore-unmatch scripts/apply_a19_v22.py .github/workflows/apply-a19-v22.yml
+        run: git rm -f --ignore-unmatch scripts/apply_a19_v22.py scripts/fix_a19_gate.py .github/workflows/apply-a19-v22.yml
       - name: Commit and push final migration
         run: |
           git config user.name "github-actions[bot]"
