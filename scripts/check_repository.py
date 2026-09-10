@@ -18,6 +18,9 @@ def require(condition: bool, message: str) -> None:
 
 
 def main() -> None:
+    for path in sorted(DOMAIN.rglob("*.py")):
+        compile(path.read_bytes(), str(path), "exec")
+
     manifest = json.loads((DOMAIN / "manifest.json").read_text(encoding="utf-8"))
     panel_manifest = json.loads((DOMAIN / "panel_manifest.json").read_text(encoding="utf-8"))
     contract = json.loads((ROOT / "panel_contract.json").read_text(encoding="utf-8"))
