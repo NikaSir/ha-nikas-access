@@ -1,8 +1,8 @@
-/* NikaS Access v0.1.8 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.9 | generated from frontend/src | do not edit bundle directly */
 
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.8";
+const UI_VERSION = "0.1.9";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const PARENT_ROUTE = "/dashboard-house-v13/home";
@@ -13,6 +13,8 @@ const COMMAND_COOLDOWN_MS = 1400;
 const TAP_CLICK_GUARD_MS = 700;
 const TAP_MOVE_THRESHOLD_PX = 8;
 const DIRECT_TOUCH_THRESHOLD_PX = 10;
+const REFRESH_MIN_BUSY_MS = 900;
+const REFRESH_RESULT_MS = 1400;
 const UNKNOWN_STATES = new Set(["unknown", "unavailable", "none", "null", ""]);
 const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
 
@@ -1093,6 +1095,11 @@ function renderDiagnosticsView() {
 /* source: styles.js */
 function panelStyles() {
   return `
+    @keyframes nikas-refresh-spin{to{transform:rotate(360deg)}}
+    .refresh.is-busy ha-icon{animation:nikas-refresh-spin .8s linear infinite}
+    .refresh.is-success{color:#43a047}
+    .refresh.is-error{color:#e53935}
+    @media (prefers-reduced-motion:reduce){.refresh.is-busy ha-icon{animation:none}}
     .domain-content{width:min(760px,100%);min-height:100%;margin:0 auto;display:flex;flex-direction:column;gap:11px}
     .panel-view{display:flex;min-width:0;flex-direction:column;gap:11px}
     .panel-view.active{animation:view-in .16s ease-out}
@@ -1268,6 +1275,9 @@ class NikasAccessPanel extends HTMLElement {
     this._unlockTimer = null;
     this._toastTimer = null;
     this._zoomToastTimer = null;
+    this._refreshPhase = "idle";
+    this._refreshRequestId = 0;
+    this._refreshResultTimer = null;
     this._zoom = this.loadZoom();
     this._gesture = null;
     this._lastTwoTap = 0;
@@ -1325,6 +1335,8 @@ class NikasAccessPanel extends HTMLElement {
     window.clearTimeout(this._unlockTimer);
     window.clearTimeout(this._toastTimer);
     window.clearTimeout(this._zoomToastTimer);
+    window.clearTimeout(this._refreshResultTimer);
+    this._refreshRequestId += 1;
     this._registryLoadId += 1;
     this._stateFrame = null;
     this._registryLoading = false;
@@ -1333,6 +1345,8 @@ class NikasAccessPanel extends HTMLElement {
     this._unlockTimer = null;
     this._toastTimer = null;
     this._zoomToastTimer = null;
+    this._refreshResultTimer = null;
+    this._refreshPhase = "idle";
     this._gesture = null;
     this._touchPointers.clear();
     this._tapSession = null;
@@ -1439,6 +1453,7 @@ class NikasAccessPanel extends HTMLElement {
     this._errorText = this.shadowRoot.getElementById("error-text");
     this._zoomToast = this.shadowRoot.querySelector(".zoom-toast");
     this._commandToast = this.shadowRoot.querySelector(".command-toast");
+    this._refreshButton = this.shadowRoot.querySelector("[data-registry-retry]");
     this.shadowRoot.addEventListener("click", (event) => this.controlClick(event));
     this.shadowRoot.addEventListener("pointerdown", (event) => this.tapPointerDown(event), { passive: true });
     this.shadowRoot.addEventListener("pointermove", (event) => this.tapPointerMove(event), { passive: true });
@@ -1479,7 +1494,7 @@ class NikasAccessPanel extends HTMLElement {
       return true;
     }
     if (button.dataset?.registryRetry !== undefined) {
-      void this.loadRegistries(true);
+      void this.runRegistryRefreshAction();
       return true;
     }
     if (button.dataset?.returnHome !== undefined) {
@@ -1503,6 +1518,32 @@ class NikasAccessPanel extends HTMLElement {
       return true;
     }
     return false;
+  }
+
+  async runRegistryRefreshAction() {
+    if (this._refreshPhase === "busy" || this._registryLoading) return;
+    const requestId = ++this._refreshRequestId;
+    window.clearTimeout(this._refreshResultTimer);
+    this._refreshResultTimer = null;
+    this._refreshPhase = "busy";
+    const startedAt = Date.now();
+    this.scheduleStatePatch();
+
+    await this.loadRegistries(true);
+    const remaining = Math.max(0, REFRESH_MIN_BUSY_MS - (Date.now() - startedAt));
+    if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
+    if (requestId !== this._refreshRequestId || !this.isConnected) return;
+
+    const success = !this._registryError;
+    this._refreshPhase = success ? "success" : "error";
+    if (!success) this.showCommandToast(`Не удалось обновить реестры: ${this._registryError}`);
+    this.scheduleStatePatch();
+    this._refreshResultTimer = window.setTimeout(() => {
+      if (requestId !== this._refreshRequestId) return;
+      this._refreshResultTimer = null;
+      this._refreshPhase = "idle";
+      this.scheduleStatePatch();
+    }, REFRESH_RESULT_MS);
   }
 
   activateView(viewId) {
@@ -1860,12 +1901,33 @@ class NikasAccessPanel extends HTMLElement {
   }
 
   patchRegistryRefresh() {
+    const phase = this._refreshPhase;
+    const busy = phase === "busy" || (phase === "idle" && this._registryLoading);
+    const resultPhase = phase === "success" || phase === "error";
+    const iconName = phase === "success"
+      ? "mdi:check"
+      : phase === "error"
+        ? "mdi:alert-circle-outline"
+        : "mdi:refresh";
+    const title = phase === "success"
+      ? "Реестры обновлены"
+      : phase === "error"
+        ? "Ошибка обновления реестров — нажмите, чтобы повторить"
+        : busy
+          ? "Реестры обновляются"
+          : "Обновить реестры Home Assistant";
     for (const button of this.shadowRoot.querySelectorAll("[data-registry-retry]")) {
-      if (button.disabled !== this._registryLoading) button.disabled = this._registryLoading;
-      const busy = String(this._registryLoading);
-      const title = this._registryLoading ? "Реестры обновляются" : "Обновить реестры Home Assistant";
-      if (button.getAttribute("aria-busy") !== busy) button.setAttribute("aria-busy", busy);
+      if (button.disabled !== busy) button.disabled = busy;
+      button.classList.toggle("is-busy", busy);
+      button.classList.toggle("is-success", phase === "success");
+      button.classList.toggle("is-error", phase === "error");
+      const icon = button.querySelector("ha-icon");
+      if (icon?.getAttribute("icon") !== iconName) icon?.setAttribute("icon", iconName);
+      const ariaBusy = String(busy);
+      if (button.getAttribute("aria-busy") !== ariaBusy) button.setAttribute("aria-busy", ariaBusy);
+      if (button.getAttribute("aria-label") !== title) button.setAttribute("aria-label", title);
       if (button.title !== title) button.title = title;
+      if (!resultPhase && !busy && button.getAttribute("aria-busy") !== "false") button.setAttribute("aria-busy", "false");
     }
   }
 

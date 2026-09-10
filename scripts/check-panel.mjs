@@ -97,12 +97,12 @@ requireContract(positionBody.includes("SECTIONAL_POSITION_ENTITY"), "contact sen
 requireContract(!positionBody.includes("SECTIONAL_CONTROL_ENTITY"), "sectional cover must not drive physical position");
 requireContract(!positionBody.includes("SWING_CONTROL_ENTITY"), "swing cover must not drive physical position");
 
-const patchStart = frontend.indexOf("  patchStates() {");
-const patchEnd = frontend.indexOf("  patchStatus(", patchStart);
-const patchBody = frontend.slice(patchStart, patchEnd);
-requireContract(patchStart >= 0 && patchEnd > patchStart, "targeted state patch is missing");
+const patchMatch = frontend.match(/  patchStates\(\) \{[\s\S]*?this\.patchRegistryRefresh\(\);[\s\S]*?this\.patchCommandLocks\(\);\n  \}/);
+requireContract(Boolean(patchMatch), "targeted state patch is missing");
+const patchBody = patchMatch?.[0] || "";
 requireContract(!patchBody.includes("innerHTML"), "state updates must not rebuild Shadow DOM");
 requireContract(!patchBody.includes("replaceChildren"), "state updates must not replace the working view");
-requireContract(!patchBody.includes("innerHTML"), "telemetry patch must not rebuild an internal view");
+requireContract(frontend.includes("  patchStatus(name, model) {"), "targeted status patch helper is missing");
+requireContract(frontend.includes("  registryStatusModel() {"), "registry status model is missing");
 
 console.log("frontend contract checks passed");

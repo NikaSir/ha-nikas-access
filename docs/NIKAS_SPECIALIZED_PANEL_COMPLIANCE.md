@@ -1,4 +1,4 @@
-# NikaS Access — Shell v2.1 compliance
+# NikaS Access — NikaS UI v2.2 / Shell v2.1 compliance
 
 Runtime: `/dashboard-access-v1/home`  
 Production bundle: `custom_components/nikas_access/frontend/nikas-access-panel.js`
@@ -13,6 +13,9 @@ Production bundle: `custom_components/nikas_access/frontend/nikas-access-panel.j
 | Work frame `1280px`; gutters `12 / 16 / 24px` | PASS |
 | Four internal destinations only | PASS |
 | Source-aware return; safe fallback House v13 | PASS |
+| Refresh Action Contract v1.1: busy ≥900ms, success/error 1400ms, retry | PASS |
+| Refresh disconnect cleanup and reduced-motion behavior | PASS |
+| Peer-device status lamps | N/A — no peer selector in Access |
 | One-shot hand-off rejects missing, expired and future timestamps | PASS |
 | Autonomous deterministic production bundle | PASS |
 | Domain entities, state truth and command safeguards preserved | PASS |

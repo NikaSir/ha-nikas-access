@@ -1,6 +1,6 @@
 {
   "standard": "NikaS specialized panel UI",
-  "standard_version": "2.1",
+  "standard_version": "2.2",
   "navigation_contract_version": "1.2",
   "integration_version": "0.1.8",
   "ui_version": "0.1.8",
@@ -30,7 +30,12 @@
   "optimistic_position": false,
   "command_confirmation": true,
   "command_deduplication": true,
-  "internal_tabs": ["statuses", "gates", "intercom", "diagnostics"],
+  "internal_tabs": [
+    "statuses",
+    "gates",
+    "intercom",
+    "diagnostics"
+  ],
   "header_title_line_1": "Контроль доступа",
   "header_title_line_2": "UI v0.1.8",
   "header_right_action": "registry-refresh",
@@ -41,5 +46,40 @@
   "safety_unknown_is_safe": false,
   "safety_unavailable_is_safe": false,
   "intercom_visible": true,
-  "intercom_controls_enabled": false
+  "intercom_controls_enabled": false,
+  "canonical_repository": "NikaSir/ha-contract-generated-ui",
+  "standard_path": "NIKAS_SPECIALIZED_PANEL_UI_STANDARD.md",
+  "standard_sha256": "2a15e5c2483f0fa959faff54cd29144ddb8c392e6da4546bd4c5034bf652c2c7",
+  "navigation_contract_path": "docs/NIKAS_PANEL_NAVIGATION_CONTRACT.md",
+  "navigation_contract_sha256": "79923d2de82ef59ab76e37491f75ba7eb7e7c4c23e62d75142744159cae64229",
+  "shell_contract": {
+    "version": "2.1",
+    "host_boundary": "ha-panel",
+    "header_body_px": 60,
+    "peer_selector_px": 52,
+    "bottom_nav_body_px": 64,
+    "content_max_width_px": 1280,
+    "coordinate_tolerance_px": 2,
+    "scroll_boundary_guard": "capture-non-passive-touchmove",
+    "specialized_tab_range": [
+      3,
+      5
+    ]
+  },
+  "refresh_action_feedback": {
+    "version": "1.1",
+    "status": "implemented",
+    "applies_when": "registry_refresh",
+    "minimum_visible_ms": 900,
+    "result_visible_ms": 1400,
+    "duplicate_activation": "blocked_while_busy",
+    "retry_during_result": true,
+    "disconnect_cleanup": true,
+    "reduced_motion": "static_busy_surface",
+    "success_semantics": "registry_request_completed_without_error"
+  },
+  "peer_device_selector": {
+    "present": false,
+    "reason": "Access has no peer physical-device selector"
+  }
 }
