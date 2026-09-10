@@ -78,6 +78,25 @@ class NikasAccessPanel extends HTMLElement {
     window.clearTimeout(this._zoomToastTimer);
     this._registryLoadId += 1;
     this._stateFrame = null;
+    this._registryLoading = false;
+    this._commandLock = false;
+    this._pendingCommand = null;
+    this._unlockTimer = null;
+    this._toastTimer = null;
+    this._zoomToastTimer = null;
+    this._gesture = null;
+    this._touchPointers.clear();
+    this._tapSession = null;
+    this._manualActivationTarget = null;
+    this._manualActivationUntil = 0;
+    this._suppressClicksUntil = 0;
+    if (this._confirmButton) this._confirmButton.disabled = false;
+    if (this._modal) {
+      this._modal.hidden = true;
+      this._modal.setAttribute("aria-hidden", "true");
+    }
+    this._zoomToast?.classList.remove("show");
+    this._commandToast?.classList.remove("show");
   }
 
   mountShell() {

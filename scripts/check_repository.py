@@ -26,9 +26,9 @@ def main() -> None:
     frontend = (DOMAIN / "frontend" / "nikas-access-panel.js").read_text(encoding="utf-8")
 
     require(manifest["domain"] == "nikas_access", "integration domain drift")
-    require(manifest["version"] == "0.1.7", "integration version drift")
-    require(panel_manifest["ui_version"] == "0.1.7", "panel version drift")
-    require(contract["integration"]["version"] == "0.1.7", "contract version drift")
+    require(manifest["version"] == "0.1.8", "integration version drift")
+    require(panel_manifest["ui_version"] == "0.1.8", "panel version drift")
+    require(contract["integration"]["version"] == "0.1.8", "contract version drift")
     require(standard["standard_version"] == "2.1", "NikaS UI standard drift")
     require(standard["navigation_contract_version"] == "1.2", "navigation contract drift")
     require(panel_manifest["entry_route"] == "/dashboard-access-v1/home", "entry route drift")
@@ -43,7 +43,7 @@ def main() -> None:
     require(frontend.count("customElements.define(ELEMENT_NAME") == 1, "one custom element registration required")
     require("shadowRoot.innerHTML" in frontend, "initial shell mount missing")
     require(contract["panel"]["internal_views"] == ["statuses", "gates", "intercom", "diagnostics"], "internal navigation drift")
-    require(contract["panel"]["header"]["title_line_2"] == "UI v0.1.7", "Header UI version drift")
+    require(contract["panel"]["header"]["title_line_2"] == "UI v0.1.8", "Header UI version drift")
     shell_path = ROOT / standard["shell_source"]
     shell_source = shell_path.read_text(encoding="utf-8")
     shell_digest = hashlib.sha256(shell_source.encode("utf-8")).hexdigest()
