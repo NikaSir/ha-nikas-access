@@ -56,16 +56,6 @@ NEW_DISCONNECT = '''  disconnectedCallback() {
   }
 '''
 
-
-def replace_exact(path: Path, old: str, new: str, *, count: int | None = None) -> None:
-    text = path.read_text(encoding="utf-8")
-    actual = text.count(old)
-    expected = count if count is not None else 1
-    if actual != expected:
-        raise SystemExit(f"{path.relative_to(ROOT)}: expected {expected} occurrence(s), found {actual}")
-    path.write_text(text.replace(old, new), encoding="utf-8")
-
-
 source = PANEL.read_text(encoding="utf-8")
 if source.count(OLD_DISCONNECT) != 1:
     raise SystemExit("frontend source: disconnectedCallback baseline drift")
@@ -83,6 +73,7 @@ version_files = [
     ROOT / "panel_contract.json",
     ROOT / "scripts/build.mjs",
     ROOT / "scripts/check_repository.py",
+    ROOT / "tests/test_panel_registration.py",
 ]
 for path in version_files:
     text = path.read_text(encoding="utf-8")
