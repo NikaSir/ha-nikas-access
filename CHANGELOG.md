@@ -1,5 +1,12 @@
 # История изменений
 
+## 0.1.9 — 2026-09-10
+
+- A19: migrated Access to NikaS Specialized Panel UI Standard v2.2 while retaining canonical Shell v2.1 geometry.
+- Implemented Refresh Action Contract v1.1 for Home Assistant registry refresh: minimum busy interval, success/error result glyphs, retry during result, reduced-motion fallback and disconnect cleanup.
+- Re-vendored the canonical Shell v2.1 source and pinned its SHA-256 in repository checks.
+- Added regression coverage proving the migration changes production behavior rather than only the declared standard version.
+
 ## 0.1.8
 
 - Исправлен lifecycle reconnect по finding A08: прерванная загрузка реестров больше не оставляет `_registryLoading` в вечном состоянии.

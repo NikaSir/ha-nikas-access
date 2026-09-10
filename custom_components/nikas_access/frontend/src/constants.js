@@ -1,5 +1,5 @@
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.8";
+const UI_VERSION = "0.1.9";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const PARENT_ROUTE = "/dashboard-house-v13/home";
@@ -10,6 +10,8 @@ const COMMAND_COOLDOWN_MS = 1400;
 const TAP_CLICK_GUARD_MS = 700;
 const TAP_MOVE_THRESHOLD_PX = 8;
 const DIRECT_TOUCH_THRESHOLD_PX = 10;
+const REFRESH_MIN_BUSY_MS = 900;
+const REFRESH_RESULT_MS = 1400;
 const UNKNOWN_STATES = new Set(["unknown", "unavailable", "none", "null", ""]);
 const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
 

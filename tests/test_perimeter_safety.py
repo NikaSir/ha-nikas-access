@@ -58,13 +58,14 @@ class PerimeterSafetyTests(unittest.TestCase):
 
     def test_state_updates_remain_targeted(self) -> None:
         start = self.panel.index("  patchStates() {")
-        end = self.panel.index("  registryStatusModel()", start)
+        end = self.panel.index("this.patchCommandLocks();", start) + len("this.patchCommandLocks();")
         body = self.panel[start:end]
         self.assertNotIn("innerHTML", body)
         self.assertNotIn("replaceChildren", body)
         self.assertIn('this.patchStatus("perimeter-internal"', body)
         self.assertIn('this.patchStatus("perimeter-external"', body)
         self.assertIn("this.patchAccessDeviceStates()", body)
+        self.assertIn("  registryStatusModel() {", self.panel)
 
 
 if __name__ == "__main__":

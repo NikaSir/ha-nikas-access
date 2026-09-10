@@ -1,5 +1,10 @@
 function panelStyles() {
   return `
+    @keyframes nikas-refresh-spin{to{transform:rotate(360deg)}}
+    .refresh.is-busy ha-icon{animation:nikas-refresh-spin .8s linear infinite}
+    .refresh.is-success{color:#43a047}
+    .refresh.is-error{color:#e53935}
+    @media (prefers-reduced-motion:reduce){.refresh.is-busy ha-icon{animation:none}}
     .domain-content{width:min(760px,100%);min-height:100%;margin:0 auto;display:flex;flex-direction:column;gap:11px}
     .panel-view{display:flex;min-width:0;flex-direction:column;gap:11px}
     .panel-view.active{animation:view-in .16s ease-out}

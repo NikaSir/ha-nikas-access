@@ -62,11 +62,13 @@ class FrontendContractTests(unittest.TestCase):
 
     def test_live_states_are_patched_without_shell_rebuild(self) -> None:
         start = self.source.index("  patchStates() {")
-        end = self.source.index("  patchStatus(", start)
+        end = self.source.index("this.patchCommandLocks();", start) + len("this.patchCommandLocks();")
         body = self.source[start:end]
         self.assertNotIn("innerHTML", body)
         self.assertNotIn("replaceChildren", body)
         self.assertIn("this.patchStatus", body)
+        self.assertIn("  patchStatus(name, model) {", self.source)
+        self.assertIn("  registryStatusModel() {", self.source)
         self.assertIn("window.requestAnimationFrame", self.source)
 
     def test_navigation_uses_source_aware_home_assistant_contract(self) -> None:
