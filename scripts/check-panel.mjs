@@ -45,7 +45,7 @@ requireContract(count(/data-command="(?:sectional|swing):(?:open|stop|close)"/g)
 requireContract(!frontend.includes("<iframe"), "iframe is forbidden");
 requireContract(!/^\s*import\s/m.test(frontend) && !frontend.includes("import("), "production bundle must be autonomous");
 requireContract(frontend.includes('const ROOT_PATH = "/dashboard-access-v1/home"'), "entry route drift");
-requireContract(frontend.includes('const PARENT_ROUTE = "/dashboard-house-v13/home"'), "parent route drift");
+requireContract(frontend.includes('const PARENT_ROUTE = "/home/overview"'), "parent route drift");
 requireContract(frontend.includes('const NIKAS_SHELL_V2_VERSION = "2.1"'), "Shell v2 source is missing");
 requireContract(frontend.includes("padding:2px 3px 6px"), "bottom-tab label clearance is missing");
 requireContract(frontend.includes("--mdc-icon-size:26px"), "bottom-tab icon must fit the 52px target row");
@@ -57,7 +57,7 @@ requireContract(frontend.includes("NIKAS_SHELL_BOUNDARY_THRESHOLD_PX = 4"), "scr
 requireContract(frontend.includes('host.addEventListener("touchmove", moveTouch, { passive: false, capture: true })'), "scroll-boundary guard must capture a non-passive touchmove");
 requireContract(frontend.includes("this._scrollBoundaryGuardCleanup = createNikasShellScrollBoundaryGuard"), "panel does not install the scroll-boundary guard");
 requireContract(frontend.includes("this._scrollBoundaryGuardCleanup?.();"), "panel does not clean up the scroll-boundary guard");
-requireContract(frontend.includes("captureNikasShellReturnRoute"), "source-aware Header return is missing");
+requireContract(frontend.includes("captureNikasShellReturnRoute"), "hierarchical Header parent resolver is missing");
 requireContract(frontend.includes('new Event("location-changed")'), "explicit Home Assistant navigation is missing");
 requireContract(!frontend.includes("position:fixed"), "panel must not bind to the browser window");
 requireContract(!frontend.includes("100vw") && !frontend.includes("100vh") && !frontend.includes("100dvh"), "viewport-sized shell is forbidden");

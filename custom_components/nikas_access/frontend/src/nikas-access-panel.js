@@ -122,7 +122,7 @@ class NikasAccessPanel extends HTMLElement {
             <ha-icon icon="mdi:menu"></ha-icon>
           </button>
           <button class="nikas-shell__title title-return" type="button" data-return-home
-            aria-label="Контроль доступа — вернуться в исходную панель NikaS">
+            aria-label="Контроль доступа — перейти к главному обзору">
             <strong>Контроль доступа</strong>
             <small>UI v${UI_VERSION}</small>
           </button>

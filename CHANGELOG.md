@@ -1,5 +1,9 @@
 # История изменений
 
+## 0.1.10
+
+The Access title opens `/home/overview` regardless of query parameters, referrer, saved routes or the source panel.
+
 ## 0.1.9 — 2026-09-10
 
 - A19: migrated Access to NikaS Specialized Panel UI Standard v2.2 while retaining canonical Shell v2.1 geometry.

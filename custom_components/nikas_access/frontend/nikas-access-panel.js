@@ -1,12 +1,12 @@
-/* NikaS Access v0.1.9 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.10 | generated from frontend/src | do not edit bundle directly */
 
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.9";
+const UI_VERSION = "0.1.10";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
-const PARENT_ROUTE = "/dashboard-house-v13/home";
-const SAFE_RETURN_ROUTE = "/dashboard-house-v13/home";
+const PARENT_ROUTE = "/home/overview";
+const SAFE_RETURN_ROUTE = "/home/overview";
 const RETURN_PANEL_ID = "access";
 const ZOOM_KEY = "nikas.access.zoom.v1";
 const COMMAND_COOLDOWN_MS = 1400;
@@ -155,6 +155,7 @@ const NIKAS_SOURCE_ROUTE_MAX_AGE_MS = 30_000;
 const NIKAS_SHELL_BOUNDARY_THRESHOLD_PX = 4;
 
 const NIKAS_BASE_ROUTES = Object.freeze([
+  Object.freeze({ root: "/home", entry: "/home/overview" }),
   Object.freeze({ root: "/dashboard-house-v13", entry: "/dashboard-house-v13/home" }),
   Object.freeze({ root: "/dashboard-rooms-v11", entry: "/dashboard-rooms-v11/rooms" }),
   Object.freeze({ root: "/dashboard-actions", entry: "/dashboard-actions/home" }),
@@ -402,33 +403,19 @@ function consumeNikasSourceHandoff(now = Date.now()) {
   return normalizeNikasBaseRoute(route);
 }
 
-function captureNikasShellReturnRoute({ panelId, parentRoute, safeReturnRoute }) {
-  const savedKey = `nikas.${panelId}.return_route.v1`;
-  const params = new URLSearchParams(window.location.search);
-  const handoff = consumeNikasSourceHandoff();
-  let saved = null;
+// Navigation contract v1.3: the declared hierarchy is the only authority.
+function captureNikasShellReturnRoute({ parentRoute } = {}) {
+  const overview = "/home/overview";
+  if (typeof parentRoute !== "string" || !parentRoute.startsWith("/")
+      || parentRoute.startsWith("//")) return overview;
   try {
-    saved = window.localStorage.getItem(savedKey);
+    const parent = new URL(parentRoute, window.location.origin);
+    if (parent.origin !== window.location.origin || parent.search || parent.hash
+        || parent.pathname === window.location.pathname) return overview;
+    return parent.pathname;
   } catch (_error) {
-    // Saved return routes are an optional convenience.
+    return overview;
   }
-  const candidates = [
-    ...params.getAll("return_to"),
-    ...params.getAll("from"),
-    handoff,
-    saved,
-    document.referrer,
-    parentRoute,
-    safeReturnRoute,
-  ];
-  const accepted = candidates.map(normalizeNikasBaseRoute).find(Boolean)
-    || NIKAS_BASE_ROUTES[0].entry;
-  try {
-    window.localStorage.setItem(savedKey, accepted);
-  } catch (_error) {
-    // The captured route remains stable for the mounted panel instance.
-  }
-  return accepted;
 }
 
 function rememberNikasSpecializedSourceRoute(destination) {
@@ -1378,7 +1365,7 @@ class NikasAccessPanel extends HTMLElement {
             <ha-icon icon="mdi:menu"></ha-icon>
           </button>
           <button class="nikas-shell__title title-return" type="button" data-return-home
-            aria-label="Контроль доступа — вернуться в исходную панель NikaS">
+            aria-label="Контроль доступа — перейти к главному обзору">
             <strong>Контроль доступа</strong>
             <small>UI v${UI_VERSION}</small>
           </button>
