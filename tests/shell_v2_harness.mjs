@@ -102,11 +102,11 @@ function shellContext(path = "/dashboard-access-v1/home", search = "") {
   );
   const route = api.captureNikasShellReturnRoute({
     panelId: "access",
-    parentRoute: "/dashboard-house-v13/home",
-    safeReturnRoute: "/dashboard-house-v13/home",
+    parentRoute: "/home/overview",
+    safeReturnRoute: "/home/overview",
   });
-  assert.equal(route, "/dashboard-actions/home");
-  assert.equal(localStorage.getItem("nikas.access.return_route.v1"), "/dashboard-actions/home");
+  assert.equal(route, "/home/overview");
+  assert.equal(localStorage.getItem("nikas.access.return_route.v1"), null);
 }
 
 {

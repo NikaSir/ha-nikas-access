@@ -71,9 +71,9 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("  registryStatusModel() {", self.source)
         self.assertIn("window.requestAnimationFrame", self.source)
 
-    def test_navigation_uses_source_aware_home_assistant_contract(self) -> None:
-        self.assertIn('const PARENT_ROUTE = "/dashboard-house-v13/home"', self.source)
-        self.assertIn('const SAFE_RETURN_ROUTE = "/dashboard-house-v13/home"', self.source)
+    def test_navigation_uses_hierarchical_home_assistant_contract(self) -> None:
+        self.assertIn('const PARENT_ROUTE = "/home/overview"', self.source)
+        self.assertIn('const SAFE_RETURN_ROUTE = "/home/overview"', self.source)
         self.assertIn("captureNikasShellReturnRoute", self.source)
         self.assertIn("window.history.pushState", self.source)
         self.assertIn('new Event("location-changed")', self.source)
