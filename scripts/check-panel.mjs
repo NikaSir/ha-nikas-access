@@ -70,7 +70,7 @@ requireContract(frontend.includes("this._commandLock = true"), "command lock is 
 requireContract(frontend.includes("COMMAND_COOLDOWN_MS"), "command deduplication window is missing");
 requireContract(frontend.includes("Объект: «${command.objectLabel}». Действие: «${command.actionLabel}»"), "confirmation must name object and action");
 requireContract(frontend.includes("this.showPersistentError"), "persistent command error is missing");
-requireContract(frontend.includes("Положение не контролируется"), "swing gate warning is missing");
+requireContract(frontend.includes("Положение — только по датчику"), "swing gate sensor description is missing");
 requireContract(frontend.includes("${renderIntercomView()}"), "intercom internal view is missing");
 requireContract(frontend.includes("Сущности домофона не назначены"), "intercom placeholder must disclose missing entities");
 requireContract(!nav.includes('/dashboard-actions/home'), "bottom navigation must not leave the Access panel for Actions");
