@@ -1,6 +1,5 @@
-/* NikaS Access v0.1.11 | generated from frontend/src | do not edit bundle directly */
-
-/* source: custom_components/nikas_access/frontend/src/constants.js */
+/* NikaS Access v0.1.11 | generated from frontend/src | do not edit bundle directly */\n
+/* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
 const UI_VERSION = "0.1.11";
 const PANEL_ROOT = "/dashboard-access-v1";
@@ -150,7 +149,7 @@ function errorText(error) {
   return String(raw).replace(/\s+/g, " ").trim().slice(0, 240) || "Неизвестная ошибка";
 }
 
-/* source: custom_components/nikas_access/frontend/src/shell-v2.js */
+/* source: shell-v2.js */
 /* NikaS specialized panel shell source kit v2.1.
  * Copy this file into a panel repository at build time and concatenate it into
  * that panel's single autonomous production bundle. Runtime imports are forbidden.
@@ -463,7 +462,7 @@ function navigateNikasShell(path, { captureSource = false } = {}) {
   return true;
 }
 
-/* source: custom_components/nikas_access/frontend/src/data/perimeters.js */
+/* source: data/perimeters.js */
 const ACTIVE_LABEL = "v_ekspluatatsii";
 const EXCLUDED_OPERATIONAL_LABELS = new Set([
   "na_obsluzhivanii",
@@ -827,7 +826,7 @@ function accessSummaryModel(internal, external, safety) {
   };
 }
 
-/* source: custom_components/nikas_access/frontend/src/data/intercom.js */
+/* source: data/intercom.js */
 const INTERCOM_MODULE = Object.freeze({
   enabled: false,
   entityIds: Object.freeze({}),
@@ -840,7 +839,7 @@ const INTERCOM_MODULE = Object.freeze({
   }),
 });
 
-/* source: custom_components/nikas_access/frontend/src/views/statuses-view.js */
+/* source: views/statuses-view.js */
 function renderStatusesView() {
   return `
     <section class="panel-view active" data-view-panel="statuses" aria-labelledby="statuses-title">
@@ -891,7 +890,7 @@ function renderStatusesView() {
     </section>`;
 }
 
-/* source: custom_components/nikas_access/frontend/src/views/gates-view.js */
+/* source: views/gates-view.js */
 function renderGatesView() {
   return `
     <section class="panel-view" data-view-panel="gates" aria-labelledby="gates-title" hidden>
@@ -962,7 +961,7 @@ function renderGatesView() {
     </section>`;
 }
 
-/* source: custom_components/nikas_access/frontend/src/views/intercom-view.js */
+/* source: views/intercom-view.js */
 function renderIntercomView() {
   return `
     <section class="panel-view" data-view-panel="intercom" aria-labelledby="intercom-title" hidden>
@@ -988,7 +987,7 @@ function renderIntercomView() {
     </section>`;
 }
 
-/* source: custom_components/nikas_access/frontend/src/views/diagnostics-view.js */
+/* source: views/diagnostics-view.js */
 function renderDiagnosticsView() {
   return `
     <section class="panel-view" data-view-panel="diagnostics" aria-labelledby="diagnostics-title" hidden>
@@ -1087,7 +1086,7 @@ function renderDiagnosticsView() {
     </section>`;
 }
 
-/* source: custom_components/nikas_access/frontend/src/styles.js */
+/* source: styles.js */
 function panelStyles() {
   return `
     @keyframes nikas-refresh-spin{to{transform:rotate(360deg)}}
@@ -1248,7 +1247,7 @@ function panelStyles() {
   `;
 }
 
-/* source: custom_components/nikas_access/frontend/src/nikas-access-panel.js */
+/* source: nikas-access-panel.js */
 class NikasAccessPanel extends HTMLElement {
   constructor() {
     super();
