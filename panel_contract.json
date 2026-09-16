@@ -103,7 +103,7 @@
   },
   "swing_gate": {
     "control_entity": "cover.umnyi_kontroller_dlia_vorot_roximo_2_door",
-    "position_source": "none",
+    "position_source": "binary_sensor.sensor_do_zb_19_contact",
     "position_label": "Положение не контролируется"
   },
   "commands": [
