@@ -1,8 +1,8 @@
-/* NikaS Access v0.1.10 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.11 | generated from frontend/src | do not edit bundle directly */
 
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.10";
+const UI_VERSION = "0.1.11";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const PARENT_ROUTE = "/home/overview";
@@ -19,6 +19,7 @@ const UNKNOWN_STATES = new Set(["unknown", "unavailable", "none", "null", ""]);
 const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
 
 const SECTIONAL_POSITION_ENTITY = "binary_sensor.sensor_do_zb_15_16_contact";
+const SWING_POSITION_ENTITY = "binary_sensor.sensor_do_zb_19_contact";
 const SECTIONAL_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_door";
 const SWING_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_2_door";
 
@@ -115,6 +116,13 @@ function sectionalPositionModel(hass) {
     return { text: "Закрыто", tone: "grey", icon: "mdi:garage-variant-lock" };
   }
   return { text: "Нет данных", tone: "red", icon: "mdi:garage-alert-variant" };
+}
+
+function swingPositionModel(hass) {
+  const state = normalizedState(stateObject(hass, SWING_POSITION_ENTITY)?.state);
+  if (state === "on") return { text: "Открыто", tone: "yellow", icon: "mdi:gate-open" };
+  if (state === "off") return { text: "Закрыто", tone: "grey", icon: "mdi:gate" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:gate-alert" };
 }
 
 function gateControlModel(hass, gate) {
@@ -925,13 +933,13 @@ function renderGatesView() {
         <article class="gate-card" data-gate="swing">
           <div class="gate-heading">
             <span class="gate-visual"><ha-icon icon="mdi:gate"></ha-icon></span>
-            <span><h2>Распашные ворота</h2><p>Физического датчика нет</p></span>
+            <span><h2>Распашные ворота</h2><p>Положение — только по датчику</p></span>
           </div>
           <div class="status-list">
-            <div class="position-note">
-              <ha-icon icon="mdi:eye-off-outline"></ha-icon>
-              <span><small>Физическое положение</small><strong>Положение не контролируется</strong></span>
-            </div>
+            <button class="status-row tone-red" type="button" data-status="swing-position" data-entity="${SWING_POSITION_ENTITY}">
+              <ha-icon icon="mdi:gate-alert"></ha-icon>
+              <span><small>Физическое положение</small><strong data-status-text>Нет данных</strong></span>
+            </button>
             <button class="status-row tone-red" type="button" data-status="swing-control" data-entity="${SWING_CONTROL_ENTITY}">
               <ha-icon icon="mdi:lan-disconnect"></ha-icon>
               <span><small>Канал управления</small><strong data-status-text>Нет данных управления</strong></span>
@@ -1854,6 +1862,7 @@ class NikasAccessPanel extends HTMLElement {
     const safety = safetyModel(this._hass, this._accessSources.safety);
     const sectionalPosition = sectionalPositionModel(this._hass);
     const sectionalControl = gateControlModel(this._hass, GATES.sectional);
+    const swingPosition = swingPositionModel(this._hass);
     const swingControl = gateControlModel(this._hass, GATES.swing);
 
     this.patchStatus("access-summary", accessSummaryModel(internal, external, safety));
@@ -1862,6 +1871,7 @@ class NikasAccessPanel extends HTMLElement {
     this.patchStatus("safety", safety);
     this.patchStatus("sectional-position", sectionalPosition);
     this.patchStatus("sectional-control", sectionalControl);
+    this.patchStatus("swing-position", swingPosition);
     this.patchStatus("swing-control", swingControl);
     this.patchStatus("registry-status", this.registryStatusModel());
     this.patchStatus("diagnostic-internal", this.accessGroupDiagnosticModel(internal));

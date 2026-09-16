@@ -15,6 +15,7 @@ const perimeters = readFileSync(
 const context = vm.createContext({ console, Set, Object, String, Boolean });
 vm.runInContext(`${constants}\n${perimeters}\nthis.api = {
   sectionalPositionModel,
+  swingPositionModel,
   accessSummaryModel,
   commandAvailable,
   discoverAccessSources,
@@ -36,6 +37,7 @@ function hass(position, sectionalCover = "closed", swingCover = "closed") {
     callService() {},
     states: {
       "binary_sensor.sensor_do_zb_15_16_contact": { state: position },
+      "binary_sensor.sensor_do_zb_19_contact": { state: position },
       "cover.umnyi_kontroller_dlia_vorot_roximo_door": { state: sectionalCover },
       "cover.umnyi_kontroller_dlia_vorot_roximo_2_door": { state: swingCover },
     },
@@ -48,6 +50,13 @@ assert(context.api.sectionalPositionModel(hass("unknown")).text === "Нет да
 assert(context.api.sectionalPositionModel(hass("unavailable")).text === "Нет данных", "sensor unavailable must not be safe");
 assert(context.api.sectionalPositionModel(hass("off", "open")).text === "Закрыто", "cover state must not override the contact sensor");
 assert(context.api.sectionalPositionModel(hass("on", "closed")).text === "Открыто", "cover state must not override the contact sensor");
+assert(context.api.swingPositionModel(hass("on")).text === "Открыто", "swing sensor on must mean open");
+assert(context.api.swingPositionModel(hass("off")).text === "Закрыто", "swing sensor off must mean closed");
+assert(context.api.swingPositionModel(hass("unknown")).text === "Нет данных", "swing sensor unknown must not be safe");
+assert(context.api.swingPositionModel(hass("unavailable")).text === "Нет данных", "swing sensor unavailable must not be safe");
+assert(context.api.swingPositionModel(hass("off", "open", "open")).text === "Закрыто", "swing cover state must not override the contact sensor");
+assert(context.api.swingPositionModel(hass("on", "closed", "closed")).text === "Открыто", "swing cover state must not override the contact sensor");
+
 assert(Object.keys(context.api.COMMANDS).length === 6, "exactly six commands must be allowlisted");
 assert(new Set(Object.values(context.api.COMMANDS).map((item) => item.service)).size === 3, "only three cover services are allowed");
 
