@@ -39,13 +39,13 @@ function renderGatesView() {
         <article class="gate-card" data-gate="swing">
           <div class="gate-heading">
             <span class="gate-visual"><ha-icon icon="mdi:gate"></ha-icon></span>
-            <span><h2>Распашные ворота</h2><p>Физического датчика нет</p></span>
+            <span><h2>Распашные ворота</h2><p>Положение — только по датчику</p></span>
           </div>
           <div class="status-list">
-            <div class="position-note">
-              <ha-icon icon="mdi:eye-off-outline"></ha-icon>
-              <span><small>Физическое положение</small><strong>Положение не контролируется</strong></span>
-            </div>
+            <button class="status-row tone-red" type="button" data-status="swing-position" data-entity="${SWING_POSITION_ENTITY}">
+              <ha-icon icon="mdi:gate-alert"></ha-icon>
+              <span><small>Физическое положение</small><strong data-status-text>Нет данных</strong></span>
+            </button>
             <button class="status-row tone-red" type="button" data-status="swing-control" data-entity="${SWING_CONTROL_ENTITY}">
               <ha-icon icon="mdi:lan-disconnect"></ha-icon>
               <span><small>Канал управления</small><strong data-status-text>Нет данных управления</strong></span>
