@@ -15,6 +15,7 @@ const perimeters = readFileSync(
 const context = vm.createContext({ console, Set, Object, String, Boolean });
 vm.runInContext(`${constants}\n${perimeters}\nthis.api = {
   sectionalPositionModel,
+  swingPositionModel,
   accessSummaryModel,
   commandAvailable,
   discoverAccessSources,
