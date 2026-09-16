@@ -22,6 +22,7 @@ class CommandSafetyTests(unittest.TestCase):
     def test_only_approved_entities_are_used(self) -> None:
         expected = {
             "binary_sensor.sensor_do_zb_15_16_contact",
+            "binary_sensor.sensor_do_zb_19_contact",
             "cover.umnyi_kontroller_dlia_vorot_roximo_door",
             "cover.umnyi_kontroller_dlia_vorot_roximo_2_door",
         }
@@ -40,9 +41,9 @@ class CommandSafetyTests(unittest.TestCase):
         self.assertIn('text: "Нет данных"', body)
 
     def test_swing_gate_never_claims_a_position(self) -> None:
-        self.assertIn("Положение не контролируется", self.panel)
-        self.assertNotIn("swingPositionModel", self.constants + self.panel)
-        self.assertEqual(self.contract["swing_gate"]["position_source"], "none")
+        self.assertIn("Положение — только по датчику", self.panel)
+        self.assertIn("swingPositionModel", self.constants + self.panel)
+        self.assertEqual(self.contract["swing_gate"]["position_source"], "binary_sensor.sensor_do_zb_19_contact")
 
     def test_command_allowlist_and_services(self) -> None:
         keys = re.findall(r'^  "((?:sectional|swing):(?:open|stop|close))": Object\.freeze', self.constants, re.MULTILINE)
