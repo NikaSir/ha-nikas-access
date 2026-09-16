@@ -1,4 +1,5 @@
-/* NikaS Access v0.1.11 | generated from frontend/src | do not edit bundle directly */\n
+/* NikaS Access v0.1.11 | generated from frontend/src | do not edit bundle directly */
+
 /* source: constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
 const UI_VERSION = "0.1.11";
