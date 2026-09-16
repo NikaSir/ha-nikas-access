@@ -611,6 +611,7 @@ class NikasAccessPanel extends HTMLElement {
     const safety = safetyModel(this._hass, this._accessSources.safety);
     const sectionalPosition = sectionalPositionModel(this._hass);
     const sectionalControl = gateControlModel(this._hass, GATES.sectional);
+    const swingPosition = swingPositionModel(this._hass);
     const swingControl = gateControlModel(this._hass, GATES.swing);
 
     this.patchStatus("access-summary", accessSummaryModel(internal, external, safety));
@@ -619,6 +620,7 @@ class NikasAccessPanel extends HTMLElement {
     this.patchStatus("safety", safety);
     this.patchStatus("sectional-position", sectionalPosition);
     this.patchStatus("sectional-control", sectionalControl);
+    this.patchStatus("swing-position", swingPosition);
     this.patchStatus("swing-control", swingControl);
     this.patchStatus("registry-status", this.registryStatusModel());
     this.patchStatus("diagnostic-internal", this.accessGroupDiagnosticModel(internal));
