@@ -1,5 +1,5 @@
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.10";
+const UI_VERSION = "0.1.11";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const PARENT_ROUTE = "/home/overview";
@@ -16,6 +16,7 @@ const UNKNOWN_STATES = new Set(["unknown", "unavailable", "none", "null", ""]);
 const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
 
 const SECTIONAL_POSITION_ENTITY = "binary_sensor.sensor_do_zb_15_16_contact";
+const SWING_POSITION_ENTITY = "binary_sensor.sensor_do_zb_19_contact";
 const SECTIONAL_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_door";
 const SWING_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_2_door";
 
@@ -112,6 +113,13 @@ function sectionalPositionModel(hass) {
     return { text: "Закрыто", tone: "grey", icon: "mdi:garage-variant-lock" };
   }
   return { text: "Нет данных", tone: "red", icon: "mdi:garage-alert-variant" };
+}
+
+function swingPositionModel(hass) {
+  const state = normalizedState(stateObject(hass, SWING_POSITION_ENTITY)?.state);
+  if (state === "on") return { text: "Открыто", tone: "yellow", icon: "mdi:gate-open" };
+  if (state === "off") return { text: "Закрыто", tone: "grey", icon: "mdi:gate" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:gate-alert" };
 }
 
 function gateControlModel(hass, gate) {
