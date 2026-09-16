@@ -37,6 +37,7 @@ function hass(position, sectionalCover = "closed", swingCover = "closed") {
     callService() {},
     states: {
       "binary_sensor.sensor_do_zb_15_16_contact": { state: position },
+      "binary_sensor.sensor_do_zb_19_contact": { state: position },
       "cover.umnyi_kontroller_dlia_vorot_roximo_door": { state: sectionalCover },
       "cover.umnyi_kontroller_dlia_vorot_roximo_2_door": { state: swingCover },
     },
