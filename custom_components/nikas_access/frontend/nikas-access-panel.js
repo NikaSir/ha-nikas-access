@@ -1,8 +1,8 @@
-/* NikaS Access v0.1.10 | generated from frontend/src | do not edit bundle directly */
+/* NikaS Access v0.1.11 | generated from frontend/src | do not edit bundle directly */
 
-/* source: constants.js */
+/* source: custom_components/nikas_access/frontend/src/constants.js */
 const ELEMENT_NAME = "nikas-access-panel";
-const UI_VERSION = "0.1.10";
+const UI_VERSION = "0.1.11";
 const PANEL_ROOT = "/dashboard-access-v1";
 const ROOT_PATH = "/dashboard-access-v1/home";
 const PARENT_ROUTE = "/home/overview";
@@ -19,6 +19,7 @@ const UNKNOWN_STATES = new Set(["unknown", "unavailable", "none", "null", ""]);
 const STATUS_TONES = ["green", "yellow", "red", "blue", "grey"];
 
 const SECTIONAL_POSITION_ENTITY = "binary_sensor.sensor_do_zb_15_16_contact";
+const SWING_POSITION_ENTITY = "binary_sensor.sensor_do_zb_19_contact";
 const SECTIONAL_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_door";
 const SWING_CONTROL_ENTITY = "cover.umnyi_kontroller_dlia_vorot_roximo_2_door";
 
@@ -117,6 +118,13 @@ function sectionalPositionModel(hass) {
   return { text: "Нет данных", tone: "red", icon: "mdi:garage-alert-variant" };
 }
 
+function swingPositionModel(hass) {
+  const state = normalizedState(stateObject(hass, SWING_POSITION_ENTITY)?.state);
+  if (state === "on") return { text: "Открыто", tone: "yellow", icon: "mdi:gate-open" };
+  if (state === "off") return { text: "Закрыто", tone: "grey", icon: "mdi:gate" };
+  return { text: "Нет данных", tone: "red", icon: "mdi:gate-alert" };
+}
+
 function gateControlModel(hass, gate) {
   if (hasUsableState(hass, gate.controlEntityId)) {
     return { text: "Управление доступно", tone: "green", icon: "mdi:lan-connect" };
@@ -142,7 +150,7 @@ function errorText(error) {
   return String(raw).replace(/\s+/g, " ").trim().slice(0, 240) || "Неизвестная ошибка";
 }
 
-/* source: shell-v2.js */
+/* source: custom_components/nikas_access/frontend/src/shell-v2.js */
 /* NikaS specialized panel shell source kit v2.1.
  * Copy this file into a panel repository at build time and concatenate it into
  * that panel's single autonomous production bundle. Runtime imports are forbidden.
@@ -455,7 +463,7 @@ function navigateNikasShell(path, { captureSource = false } = {}) {
   return true;
 }
 
-/* source: data/perimeters.js */
+/* source: custom_components/nikas_access/frontend/src/data/perimeters.js */
 const ACTIVE_LABEL = "v_ekspluatatsii";
 const EXCLUDED_OPERATIONAL_LABELS = new Set([
   "na_obsluzhivanii",
@@ -819,7 +827,7 @@ function accessSummaryModel(internal, external, safety) {
   };
 }
 
-/* source: data/intercom.js */
+/* source: custom_components/nikas_access/frontend/src/data/intercom.js */
 const INTERCOM_MODULE = Object.freeze({
   enabled: false,
   entityIds: Object.freeze({}),
@@ -832,7 +840,7 @@ const INTERCOM_MODULE = Object.freeze({
   }),
 });
 
-/* source: views/statuses-view.js */
+/* source: custom_components/nikas_access/frontend/src/views/statuses-view.js */
 function renderStatusesView() {
   return `
     <section class="panel-view active" data-view-panel="statuses" aria-labelledby="statuses-title">
@@ -883,7 +891,7 @@ function renderStatusesView() {
     </section>`;
 }
 
-/* source: views/gates-view.js */
+/* source: custom_components/nikas_access/frontend/src/views/gates-view.js */
 function renderGatesView() {
   return `
     <section class="panel-view" data-view-panel="gates" aria-labelledby="gates-title" hidden>
@@ -925,13 +933,13 @@ function renderGatesView() {
         <article class="gate-card" data-gate="swing">
           <div class="gate-heading">
             <span class="gate-visual"><ha-icon icon="mdi:gate"></ha-icon></span>
-            <span><h2>Распашные ворота</h2><p>Физического датчика нет</p></span>
+            <span><h2>Распашные ворота</h2><p>Положение — только по датчику</p></span>
           </div>
           <div class="status-list">
-            <div class="position-note">
-              <ha-icon icon="mdi:eye-off-outline"></ha-icon>
-              <span><small>Физическое положение</small><strong>Положение не контролируется</strong></span>
-            </div>
+            <button class="status-row tone-red" type="button" data-status="swing-position" data-entity="${SWING_POSITION_ENTITY}">
+              <ha-icon icon="mdi:gate-alert"></ha-icon>
+              <span><small>Физическое положение</small><strong data-status-text>Нет данных</strong></span>
+            </button>
             <button class="status-row tone-red" type="button" data-status="swing-control" data-entity="${SWING_CONTROL_ENTITY}">
               <ha-icon icon="mdi:lan-disconnect"></ha-icon>
               <span><small>Канал управления</small><strong data-status-text>Нет данных управления</strong></span>
@@ -954,7 +962,7 @@ function renderGatesView() {
     </section>`;
 }
 
-/* source: views/intercom-view.js */
+/* source: custom_components/nikas_access/frontend/src/views/intercom-view.js */
 function renderIntercomView() {
   return `
     <section class="panel-view" data-view-panel="intercom" aria-labelledby="intercom-title" hidden>
@@ -980,7 +988,7 @@ function renderIntercomView() {
     </section>`;
 }
 
-/* source: views/diagnostics-view.js */
+/* source: custom_components/nikas_access/frontend/src/views/diagnostics-view.js */
 function renderDiagnosticsView() {
   return `
     <section class="panel-view" data-view-panel="diagnostics" aria-labelledby="diagnostics-title" hidden>
@@ -1079,7 +1087,7 @@ function renderDiagnosticsView() {
     </section>`;
 }
 
-/* source: styles.js */
+/* source: custom_components/nikas_access/frontend/src/styles.js */
 function panelStyles() {
   return `
     @keyframes nikas-refresh-spin{to{transform:rotate(360deg)}}
@@ -1240,7 +1248,7 @@ function panelStyles() {
   `;
 }
 
-/* source: nikas-access-panel.js */
+/* source: custom_components/nikas_access/frontend/src/nikas-access-panel.js */
 class NikasAccessPanel extends HTMLElement {
   constructor() {
     super();
@@ -1854,6 +1862,7 @@ class NikasAccessPanel extends HTMLElement {
     const safety = safetyModel(this._hass, this._accessSources.safety);
     const sectionalPosition = sectionalPositionModel(this._hass);
     const sectionalControl = gateControlModel(this._hass, GATES.sectional);
+    const swingPosition = swingPositionModel(this._hass);
     const swingControl = gateControlModel(this._hass, GATES.swing);
 
     this.patchStatus("access-summary", accessSummaryModel(internal, external, safety));
@@ -1862,6 +1871,7 @@ class NikasAccessPanel extends HTMLElement {
     this.patchStatus("safety", safety);
     this.patchStatus("sectional-position", sectionalPosition);
     this.patchStatus("sectional-control", sectionalControl);
+    this.patchStatus("swing-position", swingPosition);
     this.patchStatus("swing-control", swingControl);
     this.patchStatus("registry-status", this.registryStatusModel());
     this.patchStatus("diagnostic-internal", this.accessGroupDiagnosticModel(internal));
