@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOMAIN = ROOT / "custom_components" / "nikas_access"
+EXPECTED_VERSION = "1.0.0-beta001"
 
 
 def require(condition: bool, message: str) -> None:
@@ -29,14 +30,17 @@ def main() -> None:
     frontend = (DOMAIN / "frontend" / "nikas-access-panel.js").read_text(encoding="utf-8")
 
     require(manifest["domain"] == "nikas_access", "integration domain drift")
-    require(manifest["version"] == "0.1.11", "integration version drift")
-    require(panel_manifest["ui_version"] == "0.1.11", "panel version drift")
-    require(contract["integration"]["version"] == "0.1.11", "contract version drift")
+    require(manifest["version"] == EXPECTED_VERSION, "integration version drift")
+    require(panel_manifest["ui_version"] == EXPECTED_VERSION, "panel version drift")
+    require(contract["integration"]["version"] == EXPECTED_VERSION, "contract version drift")
     require(standard["standard_version"] == "2.2", "NikaS UI standard drift")
     require(standard["navigation_contract_version"] == "1.3", "navigation contract drift")
-    require(standard["integration_version"] == "0.1.11", "standard integration version drift")
-    require(standard["ui_version"] == "0.1.11", "standard UI version drift")
-    require(standard["header_title_line_2"] == "UI v0.1.11", "standard Header UI version drift")
+    require(standard["integration_version"] == EXPECTED_VERSION, "standard integration version drift")
+    require(standard["ui_version"] == EXPECTED_VERSION, "standard UI version drift")
+    require(
+        standard["header_title_line_2"] == f"UI v{EXPECTED_VERSION}",
+        "standard Header UI version drift",
+    )
     require(panel_manifest["entry_route"] == "/dashboard-access-v1/home", "entry route drift")
     require(panel_manifest["parent_route"] == "/home/overview", "parent route drift")
     require('PANEL_URL_PATH = "dashboard-access-v1"' in panel_source, "panel root drift")
@@ -49,7 +53,10 @@ def main() -> None:
     require(frontend.count("customElements.define(ELEMENT_NAME") == 1, "one custom element registration required")
     require("shadowRoot.innerHTML" in frontend, "initial shell mount missing")
     require(contract["panel"]["internal_views"] == ["statuses", "gates", "intercom", "diagnostics"], "internal navigation drift")
-    require(contract["panel"]["header"]["title_line_2"] == "UI v0.1.11", "Header UI version drift")
+    require(
+        contract["panel"]["header"]["title_line_2"] == f"UI v{EXPECTED_VERSION}",
+        "Header UI version drift",
+    )
     shell_path = ROOT / standard["shell_source"]
     shell_source = shell_path.read_text(encoding="utf-8")
     shell_digest = hashlib.sha256(shell_source.encode("utf-8")).hexdigest()
