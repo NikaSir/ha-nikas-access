@@ -123,7 +123,7 @@ idle arrow → busy rotation → success check or error glyph → idle arrow.
 ### Center title plaque — open the immediate parent
 
 - The geometrically centered two-line title is a persistent clickable plaque and the sole standard return control from a specialized panel to the NikaS base interface.
-- The first line is the current specialized-panel name. The second line is the interface version in the exact form `UI vX.Y.Z`.
+- The first line is the current specialized-panel name. The second line shows the full interface version in the exact beta form `UI vMAJOR.MINOR.PATCH-betaNNN` until acceptance.
 - The whole plaque is one semantic `button` and copies the S8 OMNI reference geometry and tone exactly; it retains geometric centering between the side rails.
 - Default geometry: `justify-self:center`, `width:min(360px,100%)`, `height:52px`, `padding:5px 14px`. Below `360px` it uses `width:100%; padding-inline:8px` so the plaque fills the available center grid column without moving the side rails.
 - Reference surface: `1px` border `color-mix(in srgb,var(--primary-color,#03a9d9) 24%,var(--divider-color,#dfe3e8))`, `16px` radius, background `color-mix(in srgb,var(--primary-color,#03a9d9) 5%,var(--card-background-color,#fff))`, and shadow `0 5px 16px rgba(23,45,76,.06)`.
@@ -304,7 +304,7 @@ minimum-only height. It supersedes v1.0's larger `200px × 60px` plaque.
 - Historical source layers may be composed at build time only when the generated entrypoint contains one active shell, one active Header-return implementation and no superseded zoom or navigation engine.
 - `runtime_files` lists only files executed by Home Assistant. Build inputs are declared separately as `build_source_files`; documentation and test fixtures are never presented as runtime.
 - Generated bundles are deterministic. CI regenerates them and fails on a diff, or invokes an equivalent `--check` mode that fails when the tracked bundle is stale.
-- The visible `UI vX.Y.Z`, configured `ui_version`, panel manifest, panel contract, registration/cache key and current web-component name describe the same release. A runtime change that affects behavior increments the UI version and cache key.
+- The visible full `UI vMAJOR.MINOR.PATCH-betaNNN`, configured `ui_version`, panel manifest, panel contract, registration/cache key and current web-component name describe the same release. A runtime change that affects behavior increments the UI version and cache key.
 - The production bundle is syntax-checked directly. Tests reject runtime imports, duplicate current component registration and more than one active shell/viewport.
 - Styles required for the shell are bundled or shipped locally with the same deterministic version policy. Runtime network failure must not remove Header, navigation or core state presentation.
 
@@ -379,7 +379,7 @@ For every matrix entry, compare the measured Header, title plaque, work viewport
 - every peer selector shows one correctly classified lamp per device; selected styling remains unchanged while green/orange/red/gray health states update independently and without geometry shift;
 - the upper menu visually matches S8 OMNI: persistent 97% primary-background strip, divider, blur and three aligned plaques below Dynamic Island;
 - both Header side buttons are visible matching `44px × 44px` plaques;
-- the centered title plaque shows the panel name and exact `UI vX.Y.Z`, opens the immediate parent and reaches `/home/overview` from every main panel, including after direct opening;
+- the centered title plaque shows the panel name and exact full `UI vMAJOR.MINOR.PATCH-betaNNN`, opens the immediate parent and reaches `/home/overview` from every main panel, including after direct opening;
 - Bottom icons and labels match the Stark SolarPower visual scale;
 - integration/repository icon is present and recognizable in installed/distribution surfaces.
 - a requested connection indicator has the exact `168px × 58px` box, `13px` top/right inset, `18px` radius, internal `10px` lamp and fixed `16/700` + `13/600` text; an enabled blue corner has the exact `205px` circle and fixed fill/anchor from `NIKAS_CONNECTION_DECORATION_CONTRACT.md`;
